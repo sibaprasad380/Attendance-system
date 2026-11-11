@@ -65,6 +65,98 @@
       scrollbar-width: none;
     }
 
+    
+    /* Tactile 3D Styling System */
+    .card-3d {
+      background: linear-gradient(165deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-bottom: 3.5px solid rgba(203, 213, 225, 0.9);
+      box-shadow: 
+        0 8px 20px -4px rgba(15, 23, 42, 0.08),
+        0 4px 6px -2px rgba(15, 23, 42, 0.04),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+      border-radius: 1rem;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+    .card-3d:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 14px 28px -6px rgba(15, 23, 42, 0.12),
+        0 8px 12px -4px rgba(15, 23, 42, 0.06),
+        inset 0 1px 0 0 rgba(255, 255, 255, 1);
+    }
+    .card-3d-rose {
+      background: linear-gradient(165deg, #ffffff 0%, #fff1f2 100%);
+      border: 1px solid rgba(254, 205, 211, 0.9);
+      border-bottom: 3.5px solid #fda4af;
+      box-shadow: 
+        0 8px 20px -4px rgba(225, 29, 72, 0.1),
+        0 4px 6px -2px rgba(225, 29, 72, 0.05),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    }
+    .card-3d-emerald {
+      background: linear-gradient(165deg, #ffffff 0%, #ecfdf5 100%);
+      border: 1px solid rgba(167, 243, 208, 0.9);
+      border-bottom: 3.5px solid #6ee7b7;
+      box-shadow: 
+        0 8px 20px -4px rgba(16, 185, 129, 0.1),
+        0 4px 6px -2px rgba(16, 185, 129, 0.05),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    }
+    .card-3d-amber {
+      background: linear-gradient(165deg, #ffffff 0%, #fffbeb 100%);
+      border: 1px solid rgba(253, 230, 138, 0.9);
+      border-bottom: 3.5px solid #fcd34d;
+      box-shadow: 
+        0 8px 20px -4px rgba(245, 158, 11, 0.1),
+        0 4px 6px -2px rgba(245, 158, 11, 0.05),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    }
+    .card-3d-indigo {
+      background: linear-gradient(165deg, #ffffff 0%, #eef2ff 100%);
+      border: 1px solid rgba(199, 210, 254, 0.9);
+      border-bottom: 3.5px solid #a5b4fc;
+      box-shadow: 
+        0 8px 20px -4px rgba(99, 102, 241, 0.1),
+        0 4px 6px -2px rgba(99, 102, 241, 0.05),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    }
+    .card-3d-blue {
+      background: linear-gradient(165deg, #ffffff 0%, #eff6ff 100%);
+      border: 1px solid rgba(191, 219, 254, 0.9);
+      border-bottom: 3.5px solid #93c5fd;
+      box-shadow: 
+        0 8px 20px -4px rgba(59, 130, 246, 0.1),
+        0 4px 6px -2px rgba(59, 130, 246, 0.05),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+    }
+    /* 3D Tactile Buttons */
+    .btn-3d-emerald {
+      box-shadow: 0 3px 0 #047857, 0 4px 10px rgba(16, 185, 129, 0.25);
+      transition: all 0.1s ease;
+    }
+    .btn-3d-emerald:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #047857, 0 2px 4px rgba(16, 185, 129, 0.2);
+    }
+    .btn-3d-rose {
+      box-shadow: 0 3px 0 #be123c, 0 4px 10px rgba(225, 29, 72, 0.25);
+      transition: all 0.1s ease;
+    }
+    .btn-3d-rose:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #be123c, 0 2px 4px rgba(225, 29, 72, 0.2);
+    }
+    .btn-3d-neutral {
+      box-shadow: 0 3px 0 #cbd5e1, 0 4px 8px rgba(0, 0, 0, 0.04);
+      transition: all 0.1s ease;
+    }
+    .btn-3d-neutral:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #cbd5e1;
+    }
+
     .sticky-summary {
       position: sticky;
       right: 0;
@@ -75,51 +167,57 @@
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
   <!-- TOP HEADER -->
-  <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-40">
+  <header class="bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white sticky top-0 z-40 border-b-[4px] border-b-slate-950 shadow-[0_12px_28px_-4px_rgba(0,0,0,0.6),0_4px_8px_rgba(0,0,0,0.4)]">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
-        <!-- Logo and App Title (Cleaned heading without subtitle) -->
+        <!-- Logo and App Title with Deep 3D Accents -->
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-inner text-white">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-800 flex items-center justify-center font-bold text-xl shadow-[0_4px_0_#312e81,0_6px_14px_rgba(79,70,229,0.4)] border border-indigo-400/40 text-white flex-shrink-0">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           </div>
           <div>
-            <h1 class="text-base sm:text-lg font-bold leading-tight flex items-center gap-2">
-              Attendance & KPI Monitoring System
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Live Sync</span>
+            <h1 class="text-base sm:text-lg font-black leading-tight flex items-center gap-2 tracking-tight">
+              <span>Attendance & KPI Monitoring System</span>
+              <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-950/90 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)] border-b-[1.5px] border-b-emerald-950 backdrop-blur-sm align-middle">
+                <span class="relative flex h-1.5 w-1.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400 shadow-[0_0_4px_#34d399]"></span>
+                </span>
+                <span class="text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">Live Sync</span>
+              </span>
             </h1>
           </div>
         </div>
 
-        <!-- Header Actions: Active Month Selector, Clock, 5:00 PM Trigger, Export -->
+        <!-- Header Actions: 3D Capsules & Tactile Push Buttons -->
         <div class="flex items-center space-x-2 sm:space-x-3">
-          <!-- Active Month Selector -->
-          <div class="flex items-center space-x-1.5 bg-slate-800/90 px-2.5 py-1.5 rounded-lg border border-slate-700/80 text-xs">
-            <span class="text-slate-400 font-medium hidden md:inline">📅 Active Month:</span>
-            <select id="activeMonthSelect" class="bg-slate-900 border border-slate-700 text-white font-semibold rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-400 focus:outline-none cursor-pointer">
+          <!-- Active Month 3D Capsule -->
+          <div class="flex items-center space-x-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700/80 border-b-[3px] border-b-slate-950 shadow-[0_3px_6px_rgba(0,0,0,0.35)] text-xs">
+            <span class="text-indigo-400 font-bold hidden md:inline">📅 Month:</span>
+            <select id="activeMonthSelect" class="bg-slate-950 border border-slate-700 text-white font-bold rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-400 focus:outline-none cursor-pointer shadow-inner">
               <!-- Dynamically populated with all stored months -->
             </select>
           </div>
 
-          <!-- Live Time / 5:00 PM indicator -->
-          <div class="bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/60 hidden sm:flex items-center space-x-2 text-xs">
-            <div id="liveClockDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-            <span id="liveClock" class="font-mono font-medium text-slate-200">17:00:00</span>
-            <span class="text-slate-400 text-[10px] hidden lg:inline">IST</span>
+          <!-- Live Time 3D Capsule -->
+          <div class="bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700/80 border-b-[3px] border-b-slate-950 shadow-[0_3px_6px_rgba(0,0,0,0.35)] hidden sm:flex items-center space-x-2 text-xs">
+            <div id="liveClockDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>
+            <span id="liveClock" class="font-mono font-bold text-slate-100 tracking-wider">17:00:00</span>
+            <span class="text-slate-400 text-[10px] font-semibold hidden lg:inline">IST</span>
           </div>
 
-          <!-- 5:00 PM Check-In CTA Button -->
-          <button id="openPromptBtn" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium text-xs px-3 sm:px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400">
+          <!-- 5:00 PM Check-In 3D Push Button -->
+          <button id="openPromptBtn" class="bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white font-black text-xs px-3 sm:px-4 py-2 rounded-xl border-b-[4px] border-b-amber-800 shadow-[0_4px_12px_rgba(245,158,11,0.45)] active:translate-y-[2px] active:border-b-[2px] transition-all flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400">
             <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            <span class="font-semibold">5:00 PM Daily Check-In</span>
+            <span class="font-black">5:00 PM Daily Check-In</span>
           </button>
 
-          <!-- Export Excel with Month Selection Button -->
-          <button id="exportExcelBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+          <!-- Export Excel 3D Push Button -->
+          <button id="exportExcelBtn" class="bg-gradient-to-b from-emerald-500 via-emerald-600 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white font-black text-xs px-3 sm:px-3.5 py-2 rounded-xl border-b-[4px] border-b-emerald-900 shadow-[0_4px_12px_rgba(16,185,129,0.45)] active:translate-y-[2px] active:border-b-[2px] transition-all flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -128,34 +226,36 @@
         </div>
       </div>
 
-      <!-- NAVIGATION TABS -->
-      <nav class="flex space-x-1 sm:space-x-4 border-t border-slate-800 pt-1 -mb-px overflow-x-auto">
-        <button id="tabBtnKpi" class="tab-btn active text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-indigo-500 text-white flex items-center space-x-2">
-          <span>📊</span>
-          <span>1. KPI Dashboard</span>
-        </button>
-        <button id="tabBtnG1" class="tab-btn text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
-          <span>👥</span>
-          <span>2. Group-01 Attendance</span>
-          <span id="g1Badge" class="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded text-slate-300">15</span>
-        </button>
-        <button id="tabBtnG2" class="tab-btn text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
-          <span>👥</span>
-          <span>3. Group-02 Attendance</span>
-          <span id="g2Badge" class="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded text-slate-300">15</span>
-        </button>
-        <button id="tabBtnG3" class="tab-btn text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
-          <span>👥</span>
-          <span>4. Group-03 Attendance</span>
-          <span id="g3Badge" class="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded text-slate-300">15</span>
-        </button>
-      </nav>
+      <!-- NAVIGATION TABS (FULL 100% WIDTH 3D SEGMENTED CONTROL BAR) -->
+      <div class="py-2.5 w-full border-t border-slate-800/90">
+        <nav class="w-full grid grid-cols-2 lg:grid-cols-4 gap-2 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800/90 border-b-[3.5px] border-b-slate-950 shadow-[0_8px_22px_rgba(0,0,0,0.55)]">
+          <button id="tabBtnKpi" class="tab-btn active w-full text-xs sm:text-sm font-extrabold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 text-white shadow-[0_4px_0_#312e81,0_6px_14px_rgba(79,70,229,0.45)] border-b-[3px] border-b-indigo-900 flex items-center justify-center space-x-2">
+            <span>📊</span>
+            <span>1. KPI Dashboard</span>
+          </button>
+          <button id="tabBtnG1" class="tab-btn w-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/90 border border-slate-800/80 border-b-[2px] border-b-slate-950 hover:shadow-md flex items-center justify-center space-x-2">
+            <span>👥</span>
+            <span>2. Group-01 Attendance</span>
+            <span id="g1Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">15</span>
+          </button>
+          <button id="tabBtnG2" class="tab-btn w-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/90 border border-slate-800/80 border-b-[2px] border-b-slate-950 hover:shadow-md flex items-center justify-center space-x-2">
+            <span>👥</span>
+            <span>3. Group-02 Attendance</span>
+            <span id="g2Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">15</span>
+          </button>
+          <button id="tabBtnG3" class="tab-btn w-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/90 border border-slate-800/80 border-b-[2px] border-b-slate-950 hover:shadow-md flex items-center justify-center space-x-2">
+            <span>👥</span>
+            <span>4. Group-03 Attendance</span>
+            <span id="g3Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">15</span>
+          </button>
+        </nav>
+      </div>
     </div>
   </header>
 
   <!-- DAILY 5:00 PM ALERT BANNER -->
-  <div id="reminderBanner" class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-b border-amber-200 px-4 py-2.5">
-    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-amber-900 gap-2">
+  <div id="reminderBanner" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-2">
+    <div class="card-3d card-3d-amber p-4 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-amber-950 gap-2">
       <div class="flex items-center space-x-2">
         <span class="flex h-2.5 w-2.5 relative">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -183,91 +283,124 @@
     <!-- ========================================== -->
     <section id="viewKpi" class="space-y-6">
       
-      <!-- Dashboard Subheader with Date Control & Multi-Month Status -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            Attendance Key Performance Indicators (KPIs)
-            <span id="currentMonthBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">November 2026</span>
-          </h2>
-          <p class="text-xs text-slate-500">Live consolidated metrics across Group-1, Group-2, and Group-3 for the active month</p>
-        </div>
-        <div class="flex items-center space-x-3 text-xs">
-          <div class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
-            <span class="text-slate-500 font-medium">Selected Date:</span>
-            <input type="date" id="kpiSelectedDate" class="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer">
+      <!-- Dashboard Subheader with Date Control & Multi-Month Status (Modern 3D Executive Command Bar) -->
+      <div class="card-3d p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-white via-slate-50 to-indigo-50/30 border-b-4 border-b-indigo-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-indigo-500/25 flex-shrink-0">
+            📊
           </div>
-          <button id="resetDemoBtn" class="text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg font-medium transition" title="Reset sample factory data across months">
-            ↺ Reset Demo Data
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-slate-900 flex flex-wrap items-center gap-2 tracking-tight">
+              <span>Attendance Key Performance Indicators (KPIs)</span>
+              <span id="currentMonthBadge" class="text-xs font-bold px-3 py-0.5 rounded-full bg-indigo-100/80 text-indigo-800 border border-indigo-300/80 shadow-sm">November 2026</span>
+            </h2>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Live consolidated performance across Group-1, Group-2, and Group-3</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <div class="flex items-center space-x-2 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition">
+            <span class="text-indigo-600 font-bold text-sm">📅</span>
+            <span class="text-slate-500 font-semibold hidden xs:inline">Date:</span>
+            <input type="date" id="kpiSelectedDate" class="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer text-xs">
+          </div>
+          <button id="clearAttendanceDataBtn" class="btn-3d-rose text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 px-3.5 py-2 rounded-xl font-bold border border-rose-600 transition flex items-center space-x-1.5 shadow-sm text-xs cursor-pointer" title="Clear attendance details for active month">
+            <span>🗑️</span>
+            <span>Clear Month Attendance</span>
+          </button>
+          <button id="resetDemoBtn" class="btn-3d-neutral text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl font-bold border border-slate-200 transition flex items-center space-x-1.5" title="Reset sample factory data across months">
+            <span class="text-indigo-600">↺</span>
+            <span>Reset Demo Data</span>
           </button>
         </div>
       </div>
 
-      <!-- Top KPI Metric Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <!-- Top KPI Metric Cards (Modern 3D Executive Metric Deck) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Daily Absent % Today -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
-            <span>Selected Day Absenteeism</span>
-            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px]" id="kpiTrendBadge">Target &lt; 12.0%</span>
+        <div class="card-3d card-3d-rose p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-500 font-semibold mb-2">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span>Day Absenteeism</span>
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300 shadow-sm" id="kpiTrendBadge">Target &lt; 12.0%</span>
+            </div>
+            <div class="flex items-baseline space-x-2 mt-1">
+              <span id="kpiTodayAbsentPct" class="text-3xl sm:text-4xl font-black text-rose-600 tracking-tight">6.7%</span>
+              <span id="kpiTodayAbsentCount" class="text-xs text-slate-500 font-semibold">(3 absent / 45)</span>
+            </div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="kpiTodayAbsentPct" class="text-2xl sm:text-3xl font-extrabold text-rose-600">6.7%</span>
-            <span id="kpiTodayAbsentCount" class="text-xs text-slate-500 font-medium">(3 absent / 45)</span>
-          </div>
-          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-            <span>Month-to-Date Avg:</span>
-            <span id="kpiMtdAvgPct" class="font-bold text-slate-700">4.9%</span>
+          <div class="mt-3 text-[11px] text-slate-600 flex items-center justify-between border-t border-rose-200/60 pt-2.5">
+            <span class="font-medium">Month-to-Date Avg:</span>
+            <span id="kpiMtdAvgPct" class="font-black text-slate-900 bg-white/80 px-2 py-0.5 rounded border border-rose-200">4.9%</span>
           </div>
         </div>
 
         <!-- Total Present Today -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
-            <span>Present On Line</span>
-            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-semibold text-[10px]">Active</span>
+        <div class="card-3d card-3d-emerald p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-500 font-semibold mb-2">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Present On Line</span>
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300 shadow-sm">Active</span>
+            </div>
+            <div class="flex items-baseline space-x-2 mt-1">
+              <span id="kpiTodayPresentCount" class="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight">42</span>
+              <span id="kpiTotalManpower" class="text-xs text-slate-500 font-semibold">/ 45 Operators</span>
+            </div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="kpiTodayPresentCount" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">42</span>
-            <span id="kpiTotalManpower" class="text-xs text-slate-500 font-medium">/ 45 Operators</span>
-          </div>
-          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-            <span>Present Rate:</span>
-            <span id="kpiTodayPresentPct" class="font-bold text-emerald-700">93.3%</span>
+          <div class="mt-3 text-[11px] text-slate-600 flex items-center justify-between border-t border-emerald-200/60 pt-2.5">
+            <span class="font-medium">Present Rate:</span>
+            <span id="kpiTodayPresentPct" class="font-black text-emerald-800 bg-white/80 px-2 py-0.5 rounded border border-emerald-200">93.3%</span>
           </div>
         </div>
 
         <!-- Highest Absenteeism Group Today -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
-            <span>Critical Group Today</span>
-            <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold text-[10px]">Attention</span>
+        <div class="card-3d card-3d-amber p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-500 font-semibold mb-2">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>Critical Group</span>
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300 shadow-sm">Attention</span>
+            </div>
+            <div class="flex items-baseline space-x-2 mt-1">
+              <span id="kpiCriticalGroup" class="text-2xl sm:text-3xl font-black text-amber-700 tracking-tight">Group-02</span>
+            </div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="kpiCriticalGroup" class="text-xl sm:text-2xl font-extrabold text-amber-600">Group-02</span>
-          </div>
-          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-            <span>G2 Absent Rate:</span>
-            <span id="kpiCriticalGroupPct" class="font-bold text-amber-700">13.3% (2 Abs)</span>
+          <div class="mt-3 text-[11px] text-slate-600 flex items-center justify-between border-t border-amber-200/60 pt-2.5">
+            <span class="font-medium">Absent Rate:</span>
+            <span id="kpiCriticalGroupPct" class="font-black text-amber-900 bg-white/80 px-2 py-0.5 rounded border border-amber-200">13.3% (2 Abs)</span>
           </div>
         </div>
 
         <!-- Plant Status / Line Readiness -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
-            <span>Assembly Line Health</span>
-            <span id="kpiHealthBadge" class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px]">Optimal</span>
+        <div class="card-3d card-3d-indigo p-4 sm:p-5 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between text-xs text-slate-500 font-semibold mb-2">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                <span>Line Health</span>
+              </span>
+              <span id="kpiHealthBadge" class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-bold text-[10px] border border-indigo-300 shadow-sm">Optimal</span>
+            </div>
+            <div class="flex items-baseline space-x-2 mt-1">
+              <span id="kpiLineStatus" class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Manpower 93%</span>
+            </div>
           </div>
-          <div class="flex items-baseline space-x-2">
-            <span id="kpiLineStatus" class="text-xl sm:text-2xl font-extrabold text-slate-800">Manpower 93%</span>
-          </div>
-          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-            <span>5:00 PM Status:</span>
-            <span id="kpiCheckinStatus" class="font-bold text-emerald-600">Updated Today</span>
-          </div>
-          <div class="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
-            <span>Month Storage:</span>
-            <span id="kpiMonthRecordCount" class="font-bold text-indigo-600">3 Months Logged</span>
+          <div class="mt-3 text-[11px] text-slate-600 flex flex-col gap-1 border-t border-indigo-200/60 pt-2.5">
+            <div class="flex items-center justify-between">
+              <span class="font-medium">5:00 PM Status:</span>
+              <span id="kpiCheckinStatus" class="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Updated Today</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="font-medium">Month Records:</span>
+              <span id="kpiMonthRecordCount" class="font-bold text-indigo-700">3 Months Logged</span>
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +408,7 @@
       <!-- Group Breakdown Mini Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Group 1 Status Card -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div class="card-3d card-3d-blue p-4 rounded-2xl flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">G1</div>
             <div>
@@ -290,7 +423,7 @@
         </div>
 
         <!-- Group 2 Status Card -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div class="card-3d card-3d-amber p-4 rounded-2xl flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">G2</div>
             <div>
@@ -305,7 +438,7 @@
         </div>
 
         <!-- Group 3 Status Card -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div class="card-3d card-3d-emerald p-4 rounded-2xl flex items-center justify-between">
           <div class="flex items-center space-x-3">
             <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">G3</div>
             <div>
@@ -324,7 +457,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Daily Absenteeism Trend Chart (2 columns) -->
-        <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <div class="lg:col-span-2 card-3d p-5 rounded-2xl flex flex-col">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
@@ -345,7 +478,7 @@
         </div>
 
         <!-- High Absenteeism Leaderboard (1 column) -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+        <div class="card-3d p-5 rounded-2xl flex flex-col">
           <div class="flex items-center justify-between mb-3">
             <div>
               <h3 class="font-bold text-slate-900 text-sm sm:text-base">High Absenteeism Manpower</h3>
@@ -372,7 +505,7 @@
       <!-- Group Comparison & Operational Insights Row -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Group Comparison Bar Chart -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div class="card-3d p-5 rounded-2xl">
           <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Group-wise Average Absenteeism Comparison</h3>
           <p class="text-xs text-slate-500 mb-4">Comparing Group-01, Group-02, and Group-03 monthly average</p>
           <div class="relative h-60 w-full">
@@ -381,27 +514,27 @@
         </div>
 
         <!-- Operational Insights & Action Plan -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div class="card-3d p-5 rounded-2xl flex flex-col justify-between">
           <div>
             <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Shift Supervisor Action Points</h3>
             <p class="text-xs text-slate-500 mb-4">Automated recommendations based on current attendance patterns</p>
             
             <div class="space-y-3" id="supervisorInsights">
-              <div class="flex items-start space-x-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs">
+              <div class="card-3d card-3d-amber p-3.5 flex items-start space-x-3 text-xs">
                 <span class="text-amber-600 text-base">⚠️</span>
                 <div>
                   <strong class="text-amber-900 font-semibold block">Group-02 Reallocation Warning</strong>
                   <span class="text-amber-800">Group-02 absenteeism is currently highest. Suggest deploying 1 flexi-reliever from Group-03 to balance TAKT time on sub-assembly.</span>
                 </div>
               </div>
-              <div class="flex items-start space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs">
+              <div class="card-3d card-3d-blue p-3.5 flex items-start space-x-3 text-xs">
                 <span class="text-blue-600 text-base">ℹ️</span>
                 <div>
                   <strong class="text-blue-900 font-semibold block">Multi-Month Retention Enabled</strong>
                   <span class="text-blue-800">Attendance data is preserved for every month. You can switch between months anytime or export month-wise Excel sheets.</span>
                 </div>
               </div>
-              <div class="flex items-start space-x-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
+              <div class="card-3d card-3d-emerald p-3.5 flex items-start space-x-3 text-xs">
                 <span class="text-emerald-600 text-base">✅</span>
                 <div>
                   <strong class="text-emerald-900 font-semibold block">Group-03 Full Strength Adherence</strong>
@@ -428,7 +561,7 @@
     <section id="viewGroupMatrix" class="hidden space-y-6">
       
       <!-- Group Header and Controls -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-3d p-4 rounded-2xl">
         <div>
           <div class="flex items-center space-x-2">
             <span id="groupTabTitleBadge" class="bg-indigo-600 text-white font-bold text-xs px-2.5 py-1 rounded-md">GROUP-01</span>
@@ -463,6 +596,9 @@
             <button id="manageRosterBtn" class="bg-white text-slate-700 hover:text-indigo-700 px-2.5 py-1.5 rounded shadow-sm font-medium transition flex items-center gap-1">
               <span>📝</span> Edit Roster
             </button>
+            <button id="groupClearAttendanceBtn" class="bg-white text-rose-700 hover:text-rose-900 px-2.5 py-1.5 rounded shadow-sm font-semibold transition flex items-center gap-1 border border-rose-200" title="Clear all attendance details for active month">
+              <span>🗑️</span> Clear Month Data
+            </button>
           </div>
           <button id="switchToKpiBtn" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1">
             <span>View KPIs</span> →
@@ -471,7 +607,7 @@
       </div>
 
       <!-- Quick Legend & Instructions -->
-      <div class="flex items-center justify-between text-xs bg-slate-100 px-4 py-2 rounded-lg text-slate-600">
+      <div class="card-3d flex items-center justify-between text-xs p-3.5 rounded-xl text-slate-700 font-medium">
         <div class="flex items-center space-x-4">
           <span class="font-medium">Cell Legend:</span>
           <span class="inline-flex items-center"><span class="w-3 h-3 rounded bg-emerald-500 text-white font-bold text-[9px] flex items-center justify-center mr-1">P</span> Present</span>
@@ -485,7 +621,7 @@
       <!-- MOBILE ROLL-CALL VIEW CONTAINER (Optimized for thumb tapping on phone) -->
       <div id="mobileRollCallContainer" class="hidden space-y-4">
         <!-- Date navigator for Roll-Call -->
-        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div class="card-3d p-4 rounded-2xl flex items-center justify-between">
           <button id="prevDayBtn" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
             ◀ Prev Day
           </button>
@@ -499,7 +635,7 @@
         </div>
 
                 <!-- Mobile Search & Filter Toolbar -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        <div class="card-3d flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl">
           <div class="relative flex-1">
             <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">🔍</span>
             <input type="text" id="rollCallSearchInput" class="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Search operator in this group...">
@@ -513,15 +649,15 @@
         </div>
         <!-- Daily Roll-Call Summary Bar -->
         <div class="grid grid-cols-3 gap-2 text-center text-xs">
-          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
+          <div class="card-3d card-3d-emerald p-3 rounded-2xl">
             <span class="text-[10px] text-emerald-600 uppercase font-bold block">Present</span>
             <span id="rollCallPresentCount" class="text-lg font-extrabold text-emerald-700">14</span>
           </div>
-          <div class="bg-rose-50 border border-rose-200 p-2.5 rounded-xl">
+          <div class="card-3d card-3d-rose p-3 rounded-2xl">
             <span class="text-[10px] text-rose-600 uppercase font-bold block">Absent</span>
             <span id="rollCallAbsentCount" class="text-lg font-extrabold text-rose-700">1</span>
           </div>
-          <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
+          <div class="card-3d card-3d-amber p-3 rounded-2xl">
             <span class="text-[10px] text-amber-700 uppercase font-bold block">Daily %</span>
             <span id="rollCallPct" class="text-lg font-extrabold text-amber-800">6.7%</span>
           </div>
@@ -534,7 +670,7 @@
       </div>
 
       <!-- Attendance Sheet Table Container -->
-      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="card-3d overflow-hidden rounded-2xl">
         <div class="overflow-x-auto max-h-[550px] relative">
           <table class="w-full text-left text-xs border-collapse" id="attendanceTable">
             <thead class="bg-slate-900 text-white sticky top-0 z-30">
@@ -590,7 +726,7 @@
       <div class="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
         
         <!-- Date Selector -->
-        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div class="card-3d flex items-center justify-between p-3.5 rounded-xl">
           <div class="flex items-center space-x-2">
             <span class="font-semibold text-slate-700">Attendance Date:</span>
             <input type="date" id="modalInputDate" class="bg-white border border-slate-300 rounded px-2.5 py-1 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
@@ -632,8 +768,8 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             
             <!-- Group 1 Checklist -->
-            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
-              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+            <div class="card-3d card-3d-blue p-3.5 rounded-2xl">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-blue-200/80">
                 <span class="font-bold text-blue-700 text-xs">Group-01</span>
                 <span id="modalG1Count" class="text-[10px] text-slate-500">0 selected</span>
               </div>
@@ -643,8 +779,8 @@
             </div>
 
             <!-- Group 2 Checklist -->
-            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
-              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+            <div class="card-3d card-3d-indigo p-3.5 rounded-2xl">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-indigo-200/80">
                 <span class="font-bold text-indigo-700 text-xs">Group-02</span>
                 <span id="modalG2Count" class="text-[10px] text-slate-500">0 selected</span>
               </div>
@@ -654,8 +790,8 @@
             </div>
 
             <!-- Group 3 Checklist -->
-            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
-              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+            <div class="card-3d card-3d-emerald p-3.5 rounded-2xl">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-emerald-200/80">
                 <span class="font-bold text-emerald-700 text-xs">Group-03</span>
                 <span id="modalG3Count" class="text-[10px] text-slate-500">0 selected</span>
               </div>
@@ -720,7 +856,7 @@
         </div>
 
         <!-- Export Summary Card -->
-        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+        <div class="card-3d p-4 rounded-2xl space-y-2">
           <div class="flex items-center justify-between text-xs">
             <span class="text-slate-500">Workbook Format:</span>
             <span class="font-semibold text-slate-800">Microsoft Excel (.xlsx)</span>
@@ -738,7 +874,7 @@
         </div>
 
         <!-- Multi-Month Bulk Option -->
-        <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+        <div class="card-3d card-3d-indigo p-3.5 rounded-2xl flex items-center justify-between">
           <div>
             <strong class="text-xs font-semibold text-indigo-950 block">Export All Stored Months?</strong>
             <span class="text-[11px] text-indigo-700">Downloads a master workbook containing all recorded months</span>
@@ -902,6 +1038,56 @@
     <span>5:00 PM Check-In</span>
   </button>
 
+  
+  <!-- ========================================== -->
+  <!-- MODAL 6: CLEAR ATTENDANCE DETAILS MODAL -->
+  <!-- ========================================== -->
+  <div id="clearDataModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col p-6 space-y-4">
+      
+      <!-- Warning Header -->
+      <div class="flex items-center space-x-3 border-b border-rose-100 pb-3">
+        <div class="w-11 h-11 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-inner border border-rose-200">
+          ⚠️
+        </div>
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-base">Warning: Clear Attendance Details</h3>
+          <p class="text-xs text-rose-600 font-semibold">Active Month: <span id="clearModalMonthLabel" class="font-bold underline">November 2026</span></p>
+        </div>
+      </div>
+
+      <!-- Warning Content -->
+      <div class="space-y-3 text-xs sm:text-sm text-slate-600">
+        <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs space-y-2">
+          <strong class="font-bold block text-sm text-rose-950">Are you sure you want to clear all attendance?</strong>
+          <p>This action will reset all daily Present (P) and Absent (A) marks for <strong><span id="clearWarningMonthName">November 2026</span></strong> across Group-01, Group-02, and Group-03.</p>
+          <div class="p-2 bg-white/80 rounded-lg border border-rose-200/80 text-emerald-800 font-semibold">
+            ✅ Operator names and group rosters will be kept safe so you can rename or update operators for the new month.
+          </div>
+        </div>
+
+        <!-- Required Checkbox Confirmation -->
+        <label class="flex items-start space-x-2.5 p-3 rounded-xl border-2 border-slate-200 bg-slate-50 cursor-pointer select-none hover:bg-slate-100/80 transition">
+          <input type="checkbox" id="confirmClearCheckbox" class="mt-0.5 w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer">
+          <span class="text-xs text-slate-700 font-semibold leading-relaxed">
+            I understand this action will reset all attendance marks for this month, and I want to proceed.
+          </span>
+        </label>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+        <button id="cancelClearDataBtn" class="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-semibold">
+          Cancel
+        </button>
+        <button id="confirmClearDataBtn" disabled class="bg-rose-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1.5">
+          <span>Confirm & Clear All Data</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
@@ -988,15 +1174,18 @@
               if (isSunday) {
                 row.push('WO'); // Weekly off
               } else if (isSample) {
-                // Realistic factory attendance pattern
-                let absentRate = 0.04;
-                if (gId === 2) absentRate = 0.08;
-                if (opIdx === 1 || opIdx === 3) absentRate = 0.20;
-
-                const pseudoRand = ((opIdx * 19 + d * 31 + gId * 11 + monthIndex * 7) % 100) / 100;
-                row.push(pseudoRand < absentRate ? 'A' : 'P');
+                // Only populate past sample days (e.g. days 1 to 9), leaving current/future days EMPTY until data received
+                if (d < 10) {
+                  let absentRate = 0.04;
+                  if (gId === 2) absentRate = 0.08;
+                  if (opIdx === 1 || opIdx === 3) absentRate = 0.20;
+                  const pseudoRand = ((opIdx * 19 + d * 31 + gId * 11 + monthIndex * 7) % 100) / 100;
+                  row.push(pseudoRand < absentRate ? 'A' : 'P');
+                } else {
+                  row.push(null); // Empty until 5:00 PM data received!
+                }
               } else {
-                row.push('P'); // Default present
+                row.push(null); // Empty by default until data is received!
               }
             }
             APP_STATE.monthlyAttendance[monthKey][gId][opIdx] = row;
@@ -1432,10 +1621,27 @@
       document.getElementById('kpiTodayAbsentCount').textContent = `(${metrics.totalAbsentToday} absent / ${metrics.totalManpower})`;
       document.getElementById('kpiMtdAvgPct').textContent = `${metrics.mtdAvgPct}%`;
 
-      document.getElementById('kpiTodayPresentCount').textContent = metrics.totalPresentToday;
-      document.getElementById('kpiTotalManpower').textContent = `/ ${metrics.totalManpower} Operators`;
-      const presentRate = metrics.totalManpower > 0 ? (metrics.totalPresentToday / metrics.totalManpower * 100).toFixed(1) : 0;
-      document.getElementById('kpiTodayPresentPct').textContent = `${presentRate}%`;
+      const isDataReceived = (metrics.totalPresentToday + metrics.totalAbsentToday) > 0;
+      if (!isDataReceived) {
+        document.getElementById('kpiTodayAbsentPct').textContent = `Pending`;
+        document.getElementById('kpiTodayAbsentCount').textContent = `(Awaiting 5:00 PM Data)`;
+        document.getElementById('kpiTodayPresentCount').textContent = `-`;
+        document.getElementById('kpiTodayPresentPct').textContent = `Pending`;
+        const trendBadge = document.getElementById('kpiTrendBadge');
+        if (trendBadge) {
+          trendBadge.className = 'px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] border border-slate-300';
+          trendBadge.textContent = 'Awaiting Data';
+        }
+        document.getElementById('kpiCheckinStatus').textContent = 'Pending 5PM Roll-Call';
+        document.getElementById('kpiCheckinStatus').className = 'font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200';
+      } else {
+        document.getElementById('kpiTodayPresentCount').textContent = metrics.totalPresentToday;
+        document.getElementById('kpiTotalManpower').textContent = `/ ${metrics.totalManpower} Operators`;
+        const presentRate = metrics.totalManpower > 0 ? (metrics.totalPresentToday / metrics.totalManpower * 100).toFixed(1) : 0;
+        document.getElementById('kpiTodayPresentPct').textContent = `${presentRate}%`;
+        document.getElementById('kpiCheckinStatus').textContent = 'Updated Today';
+        document.getElementById('kpiCheckinStatus').className = 'font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200';
+      }
 
       // Critical Group
       let highestG = 1;
@@ -1463,7 +1669,7 @@
 
       metrics.leaderboard.slice(0, 7).forEach((op, idx) => {
         const item = document.createElement('div');
-        item.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition border border-transparent hover:border-slate-100 text-xs';
+        item.className = 'flex items-center justify-between p-2.5 rounded-xl bg-white/80 hover:bg-white transition border border-slate-200/80 border-b-2 border-b-slate-300/80 shadow-sm hover:shadow text-xs';
         
         const rankColor = idx === 0 ? 'bg-rose-500 text-white' : idx === 1 ? 'bg-orange-500 text-white' : idx === 2 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-700';
         const badgeColor = op.pct > 15 ? 'bg-rose-100 text-rose-800 border-rose-200' : op.pct > 8 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-700 border-slate-200';
@@ -1710,9 +1916,9 @@
         const isWO = status === 'WO';
 
         const card = document.createElement('div');
-        card.className = `p-3.5 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
-          isAbs ? 'bg-rose-50/80 border-rose-300 shadow-sm ring-1 ring-rose-400/40' :
-          isPres ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' :
+        card.className = `p-4 rounded-2xl transition-all duration-200 flex flex-col justify-between card-3d ${
+          isAbs ? 'card-3d-rose ring-1 ring-rose-400/50' :
+          isPres ? 'bg-white' :
           'bg-slate-50 border-slate-200 text-slate-500'
         }`;
 
@@ -1739,15 +1945,15 @@
             <span class="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#${opIdx + 1}</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+          <div class="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-200/60">
             <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'P')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
-              isPres ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400' : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700'
+              isPres ? 'bg-emerald-600 text-white btn-3d-emerald ring-2 ring-emerald-400' : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 btn-3d-neutral'
             }">
               <span>✓</span>
               <span>Present</span>
             </button>
             <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'A')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
-              isAbs ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400' : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700'
+              isAbs ? 'bg-rose-600 text-white btn-3d-rose ring-2 ring-rose-400' : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 btn-3d-neutral'
             }">
               <span>✗</span>
               <span>Absent</span>
@@ -1784,9 +1990,9 @@
 
       const current = mData[groupId][opIdx][dayIdx];
       if (current === 'P') mData[groupId][opIdx][dayIdx] = 'A';
-      else if (current === 'A') mData[groupId][opIdx][dayIdx] = 'P';
+      else if (current === 'A') mData[groupId][opIdx][dayIdx] = null; // Back to empty
       else if (current === 'WO') mData[groupId][opIdx][dayIdx] = 'P';
-      else mData[groupId][opIdx][dayIdx] = 'P';
+      else mData[groupId][opIdx][dayIdx] = 'P'; // From empty -> Present
 
       saveToStorage();
       renderGroupMatrix(groupId);
@@ -1914,6 +2120,52 @@
     }
 
     
+    
+    // --- CLEAR ATTENDANCE DETAILS LOGIC ---
+    function openClearAttendanceModal() {
+      const curMonthName = `${MONTH_NAMES[APP_STATE.selectedMonth]} ${APP_STATE.selectedYear}`;
+      document.getElementById('clearModalMonthLabel').textContent = curMonthName;
+      document.getElementById('clearWarningMonthName').textContent = curMonthName;
+
+      const chk = document.getElementById('confirmClearCheckbox');
+      chk.checked = false;
+      document.getElementById('confirmClearDataBtn').disabled = true;
+
+      document.getElementById('clearDataModal').classList.remove('hidden');
+    }
+
+    function executeClearAttendanceData() {
+      const monthKey = getActiveMonthKey();
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      const days = calculateDaysInMonth(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+
+      // Reset all attendance marks to EMPTY (null) for active month, keeping only Sundays as 'WO'
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        group.operators.forEach((_, opIdx) => {
+          mData[gId][opIdx] = [];
+          for (let d = 1; d <= days; d++) {
+            const dateObj = new Date(APP_STATE.selectedYear, APP_STATE.selectedMonth, d);
+            const isSunday = dateObj.getDay() === 0;
+            mData[gId][opIdx].push(isSunday ? 'WO' : null); // Empty until data received
+          }
+        });
+      });
+
+      saveToStorage();
+      document.getElementById('clearDataModal').classList.add('hidden');
+
+      updateKpiDashboard();
+      if (APP_STATE.currentTab !== 'kpi') {
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderGroupMatrix(gNum);
+        renderMobileRollCallCards(gNum);
+      }
+
+      const mName = `${MONTH_NAMES[APP_STATE.selectedMonth]} ${APP_STATE.selectedYear}`;
+      showToast("Attendance Cleared", `Reset all attendance records for ${mName}. Roster names are preserved.`, "success");
+    }
+
     // --- BATCH MANAGE ROSTER FUNCTIONS ---
     let currentManagingGroup = 1;
 
@@ -1928,7 +2180,7 @@
 
       group.operators.forEach((name, opIdx) => {
         const row = document.createElement('div');
-        row.className = 'flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200';
+        row.className = 'card-3d p-2.5 rounded-xl flex items-center space-x-2.5';
         row.innerHTML = `
           <span class="w-6 text-center font-mono text-slate-400 font-bold text-xs">${opIdx + 1}</span>
           <input type="text" data-idx="${opIdx}" class="roster-name-input flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="${name}">
@@ -2082,7 +2334,7 @@
             totalAbsentCount++;
           } else {
             const isSun = new Date(targetYear, targetMonth, dayIdx + 1).getDay() === 0;
-            mData[gId][opIdx][dayIdx] = isSun ? 'WO' : 'P';
+            mData[gId][opIdx][dayIdx] = isSun ? 'WO' : 'P'; // Marked Present upon receiving data
           }
         });
       });
@@ -2348,24 +2600,27 @@
 
       function setTab(tabName) {
         APP_STATE.currentTab = tabName;
+        const activeTabClasses = ['bg-gradient-to-r', 'from-indigo-600', 'via-indigo-500', 'to-indigo-600', 'text-white', 'shadow-[0_4px_0_#312e81,0_6px_14px_rgba(79,70,229,0.45)]', 'border-b-[3px]', 'border-b-indigo-900', 'font-extrabold'];
+        const inactiveTabClasses = ['text-slate-300', 'hover:text-white', 'bg-slate-900/60', 'hover:bg-slate-800/90', 'border', 'border-slate-800/80', 'border-b-[2px]', 'border-b-slate-950', 'font-semibold'];
+
         [tabKpi, tabG1, tabG2, tabG3].forEach(b => {
-          b.classList.remove('border-indigo-500', 'text-white');
-          b.classList.add('border-transparent', 'text-slate-400');
+          activeTabClasses.forEach(c => b.classList.remove(c));
+          inactiveTabClasses.forEach(c => b.classList.add(c));
         });
 
         if (typeof updateMobNavState === 'function') updateMobNavState(tabName);
 
         if (tabName === 'kpi') {
-          tabKpi.classList.add('border-indigo-500', 'text-white');
-          tabKpi.classList.remove('border-transparent', 'text-slate-400');
+          inactiveTabClasses.forEach(c => tabKpi.classList.remove(c));
+          activeTabClasses.forEach(c => tabKpi.classList.add(c));
           viewKpi.classList.remove('hidden');
           viewMatrix.classList.add('hidden');
           updateKpiDashboard();
         } else {
           const gId = tabName === 'group1' ? 1 : tabName === 'group2' ? 2 : 3;
           const targetBtn = tabName === 'group1' ? tabG1 : tabName === 'group2' ? tabG2 : tabG3;
-          targetBtn.classList.add('border-indigo-500', 'text-white');
-          targetBtn.classList.remove('border-transparent', 'text-slate-400');
+          inactiveTabClasses.forEach(c => targetBtn.classList.remove(c));
+          activeTabClasses.forEach(c => targetBtn.classList.add(c));
 
           viewKpi.classList.add('hidden');
           viewMatrix.classList.remove('hidden');
@@ -2511,7 +2766,7 @@
           APP_STATE.monthlyAttendance[mKey][gId][newIdx] = [];
           for (let d = 1; d <= days; d++) {
             const isSun = new Date(y, m - 1, d).getDay() === 0;
-            APP_STATE.monthlyAttendance[mKey][gId][newIdx].push(isSun ? 'WO' : 'P');
+            APP_STATE.monthlyAttendance[mKey][gId][newIdx].push(isSun ? 'WO' : null);
           }
         });
 
@@ -2729,6 +2984,26 @@
       if (fAll) fAll.addEventListener('click', () => setFilterChip('all'));
       if (fAbs) fAbs.addEventListener('click', () => setFilterChip('absent'));
       if (fPres) fPres.addEventListener('click', () => setFilterChip('present'));
+
+      
+      // 14. Clear Attendance Details Listeners
+      const clearModal = document.getElementById('clearDataModal');
+      const clearBtn = document.getElementById('clearAttendanceDataBtn');
+      const groupClearBtn = document.getElementById('groupClearAttendanceBtn');
+      if (clearBtn) clearBtn.addEventListener('click', openClearAttendanceModal);
+      if (groupClearBtn) groupClearBtn.addEventListener('click', openClearAttendanceModal);
+
+      const cancelClearBtn = document.getElementById('cancelClearDataBtn');
+      if (cancelClearBtn) cancelClearBtn.addEventListener('click', () => clearModal.classList.add('hidden'));
+
+      const chkClear = document.getElementById('confirmClearCheckbox');
+      const confirmClearBtn = document.getElementById('confirmClearDataBtn');
+      if (chkClear && confirmClearBtn) {
+        chkClear.addEventListener('change', () => {
+          confirmClearBtn.disabled = !chkClear.checked;
+        });
+        confirmClearBtn.addEventListener('click', executeClearAttendanceData);
+      }
 
       // Initial Dashboard render
       updateKpiDashboard();
