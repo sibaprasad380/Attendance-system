@@ -9,7 +9,7 @@
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- SheetJS for Multi-Tab & Multi-Month Excel Export -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
     body {
@@ -155,6 +155,24 @@
     .btn-3d-neutral:active {
       transform: translateY(2px);
       box-shadow: 0 1px 0 #cbd5e1;
+    }
+
+    
+    /* Extreme Performance & 60fps Optimization */
+    * {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeSpeed;
+    }
+    .card-3d {
+      contain: layout style;
+    }
+    #attendanceTable {
+      contain: paint;
+    }
+    @media (hover: none) {
+      .card-3d:hover {
+        transform: none !important;
+      }
     }
 
     .sticky-summary {
@@ -1217,6 +1235,12 @@
       saveToStorage();
     }
 
+        // --- DEBOUNCED LOCAL STORAGE (PREVENTS UI FREEZING) ---
+    let storageTimer = null;
+    function debouncedSaveToStorage() {
+      clearTimeout(storageTimer);
+      storageTimer = setTimeout(saveToStorage, 150);
+    }
     // --- LOCAL STORAGE HANDLING (PERMANENT PERSISTENCE) ---
     function saveToStorage() {
       try {
@@ -1511,71 +1535,78 @@
     let groupChartInstance = null;
 
     function renderCharts(metrics) {
-      // 1. Daily Absenteeism Trend Line Chart
+      if (APP_STATE.currentTab !== 'kpi') return; // Skip heavy canvas drawing when tab is hidden!
+
       const lineCtx = document.getElementById('dailyAbsentChart');
       if (lineCtx) {
         const labels = metrics.dailyTrend.map(d => `D${d.day}`);
         const dataValues = metrics.dailyTrend.map(d => d.pct);
         const targetValues = metrics.dailyTrend.map(() => 12.0);
+        const yMax = Math.max(20, Math.ceil(Math.max(...dataValues.filter(v => v !== null), 13) + 3));
 
-        if (dailyChartInstance) dailyChartInstance.destroy();
-
-        dailyChartInstance = new Chart(lineCtx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: 'Daily Absent %',
-                data: dataValues,
-                borderColor: '#e11d48',
-                backgroundColor: 'rgba(225, 29, 72, 0.08)',
-                borderWidth: 2.5,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 3,
-                pointHoverRadius: 6,
-                spanGaps: false
-              },
-              {
-                label: 'Target KPI (12.0%)',
-                data: targetValues,
-                borderColor: '#94a3b8',
-                borderWidth: 1.5,
-                borderDash: [5, 5],
-                pointRadius: 0,
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    if (context.parsed.y === null) return 'No data logged';
-                    return `Absenteeism: ${context.parsed.y}%`;
+        if (dailyChartInstance) {
+          // Blazing fast in-place update without destroying canvas
+          dailyChartInstance.data.labels = labels;
+          dailyChartInstance.data.datasets[0].data = dataValues;
+          dailyChartInstance.data.datasets[1].data = targetValues;
+          dailyChartInstance.options.scales.y.max = yMax;
+          dailyChartInstance.update('none');
+        } else {
+          dailyChartInstance = new Chart(lineCtx, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [
+                {
+                  label: 'Daily Absent %',
+                  data: dataValues,
+                  borderColor: '#e11d48',
+                  backgroundColor: 'rgba(225, 29, 72, 0.08)',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.2,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
+                  spanGaps: false
+                },
+                {
+                  label: 'Target KPI (12.0%)',
+                  data: targetValues,
+                  borderColor: '#94a3b8',
+                  borderWidth: 1.5,
+                  borderDash: [5, 5],
+                  pointRadius: 0,
+                  fill: false
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false, // Zero animation lag
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  animation: false,
+                  callbacks: {
+                    label: ctx => ctx.parsed.y === null ? 'No data logged' : `Absenteeism: ${ctx.parsed.y}%`
                   }
                 }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: Math.max(20, Math.ceil(Math.max(...dataValues.filter(v => v !== null), 13) + 3)),
-                ticks: { callback: v => v + '%' },
-                grid: { color: '#f1f5f9' }
               },
-              x: { grid: { display: false } }
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: yMax,
+                  ticks: { callback: v => v + '%' },
+                  grid: { color: '#f1f5f9' }
+                },
+                x: { grid: { display: false } }
+              }
             }
-          }
-        });
+          });
+        }
       }
 
-      // 2. Group Comparison Bar Chart
       const barCtx = document.getElementById('groupComparisonChart');
       if (barCtx) {
         const gLabels = ['Group-01', 'Group-02', 'Group-03'];
@@ -1585,34 +1616,40 @@
           metrics.groupBreakdown[3].absentPct.toFixed(1)
         ];
 
-        if (groupChartInstance) groupChartInstance.destroy();
-
-        groupChartInstance = new Chart(barCtx, {
-          type: 'bar',
-          data: {
-            labels: gLabels,
-            datasets: [{
-              label: "Daily Absent %",
-              data: gData,
-              backgroundColor: ['#3b82f6', '#6366f1', '#10b981'],
-              borderRadius: 6,
-              barThickness: 36
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: { callback: v => v + '%' },
-                grid: { color: '#f1f5f9' }
-              },
-              x: { grid: { display: false } }
+        if (groupChartInstance) {
+          // Blazing fast in-place update
+          groupChartInstance.data.labels = gLabels;
+          groupChartInstance.data.datasets[0].data = gData;
+          groupChartInstance.update('none');
+        } else {
+          groupChartInstance = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+              labels: gLabels,
+              datasets: [{
+                label: "Daily Absent %",
+                data: gData,
+                backgroundColor: ['#3b82f6', '#6366f1', '#10b981'],
+                borderRadius: 6,
+                barThickness: 32
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: { callback: v => v + '%' },
+                  grid: { color: '#f1f5f9' }
+                },
+                x: { grid: { display: false } }
+              }
             }
-          }
-        });
+          });
+        }
       }
     }
 
@@ -1708,9 +1745,9 @@
       document.getElementById('groupTabTitle').textContent = `${group.name} Monthly Attendance Sheet`;
       document.getElementById('matrixMonthBadge').textContent = `${MONTH_NAMES[APP_STATE.selectedMonth]} ${APP_STATE.selectedYear}`;
 
-      // 1. Build Header Row
+      // 1. Build Header Row in ONE pass
       const headerRow = document.getElementById('tableHeaderRow');
-      headerRow.innerHTML = `
+      let headerHtml = `
         <th class="p-2.5 w-12 text-center sticky-col-1 bg-slate-900 border-r border-slate-800">#</th>
         <th class="p-2.5 w-44 text-left sticky-col-2 bg-slate-900 border-r border-slate-800">Operator Name</th>
       `;
@@ -1721,29 +1758,25 @@
         const isSun = dateObj.getDay() === 0;
         const isToday = isViewingCurrentMonth && (d === todayDate);
 
-        const th = document.createElement('th');
-        th.className = `p-1.5 w-9 text-center border-r border-slate-800 ${isSun ? 'bg-slate-800 text-rose-400' : ''} ${isToday ? 'bg-indigo-800 text-white font-bold ring-2 ring-indigo-400' : ''}`;
-        th.innerHTML = `
-          <div class="text-[10px] uppercase font-normal">${dayOfWeek}</div>
-          <div class="text-xs font-semibold">${d}</div>
+        headerHtml += `
+          <th class="p-1.5 w-9 text-center border-r border-slate-800 ${isSun ? 'bg-slate-800 text-rose-400' : ''} ${isToday ? 'bg-indigo-800 text-white font-bold ring-2 ring-indigo-400' : ''}">
+            <div class="text-[10px] uppercase font-normal">${dayOfWeek}</div>
+            <div class="text-xs font-semibold">${d}</div>
+          </th>
         `;
-        headerRow.appendChild(th);
       }
 
-      headerRow.innerHTML += `
+      headerHtml += `
         <th class="p-2.5 w-16 text-center bg-emerald-950 text-emerald-300 border-l border-slate-800">Pres (P)</th>
         <th class="p-2.5 w-16 text-center bg-rose-950 text-rose-300">Abs (A)</th>
         <th class="p-2.5 w-20 text-center sticky-summary bg-slate-900 border-l border-slate-800">Absent %</th>
       `;
+      headerRow.innerHTML = headerHtml;
 
-      // 2. Build Body Rows (Operators)
-      const tableBody = document.getElementById('tableBody');
-      tableBody.innerHTML = '';
+      // 2. Build Body Rows in ONE batch string (Instant 60fps render)
+      const allRowsHtml = [];
 
       group.operators.forEach((name, opIdx) => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-indigo-50/40 transition border-b border-slate-200';
-
         let pCount = 0;
         let aCount = 0;
 
@@ -1767,7 +1800,7 @@
           if (status === 'A') aCount++;
 
           let cellClass = 'bg-white/80 text-transparent border border-slate-200/70 hover:bg-slate-100 hover:border-slate-300';
-          let label = ''; // Completely BLANK!
+          let label = '';
 
           if (status === 'P') {
             cellClass = 'bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200';
@@ -1799,24 +1832,20 @@
           <td class="p-2 text-center font-bold sticky-summary bg-white border-l border-slate-200 ${pctBadge}">${opPct}%</td>
         `;
 
-        row.innerHTML = cellsHtml;
-        tableBody.appendChild(row);
+        allRowsHtml.push(`<tr class="hover:bg-indigo-50/40 transition border-b border-slate-200">${cellsHtml}</tr>`);
       });
 
-      // 3. Build Footer Rows (DAILY TOTALS & DAILY % ABSENT)
-      const footTotalRow = document.getElementById('footTotalRow');
-      const footPresentRow = document.getElementById('footPresentRow');
-      const footAbsentRow = document.getElementById('footAbsentRow');
-      const footPctRow = document.getElementById('footPctRow');
+      document.getElementById('tableBody').innerHTML = allRowsHtml.join('');
 
-      footTotalRow.innerHTML = `<td class="p-2 text-center sticky-col-1 bg-slate-100 border-r border-slate-200">Σ</td><td class="p-2 font-bold sticky-col-2 bg-slate-100 border-r border-slate-200">Total Operators</td>`;
-      footPresentRow.innerHTML = `<td class="p-2 text-center sticky-col-1 bg-emerald-100 border-r border-slate-200">✓</td><td class="p-2 font-bold sticky-col-2 bg-emerald-100 border-r border-slate-200">Daily Present Count</td>`;
-      footAbsentRow.innerHTML = `<td class="p-2 text-center sticky-col-1 bg-rose-100 border-r border-slate-200">✗</td><td class="p-2 font-bold sticky-col-2 bg-rose-100 border-r border-slate-200">Daily Absent Count</td>`;
-      footPctRow.innerHTML = `<td class="p-2.5 text-center sticky-col-1 bg-rose-200 border-r border-slate-300 font-extrabold">%</td><td class="p-2.5 font-extrabold sticky-col-2 bg-rose-200 border-r border-slate-300 text-rose-950 uppercase tracking-tight">DAILY % ABSENT</td>`;
-
+      // 3. Build Footer Rows in ONE batch pass
       const opTotal = group.operators.length;
       let monthTotalP = 0;
       let monthTotalA = 0;
+
+      let fTotCells = `<td class="p-2 text-center sticky-col-1 bg-slate-100 border-r border-slate-200">Σ</td><td class="p-2 font-bold sticky-col-2 bg-slate-100 border-r border-slate-200">Total Operators</td>`;
+      let fPresCells = `<td class="p-2 text-center sticky-col-1 bg-emerald-100 border-r border-slate-200">✓</td><td class="p-2 font-bold sticky-col-2 bg-emerald-100 border-r border-slate-200">Daily Present Count</td>`;
+      let fAbsCells = `<td class="p-2 text-center sticky-col-1 bg-rose-100 border-r border-slate-200">✗</td><td class="p-2 font-bold sticky-col-2 bg-rose-100 border-r border-slate-200">Daily Absent Count</td>`;
+      let fPctCells = `<td class="p-2.5 text-center sticky-col-1 bg-rose-200 border-r border-slate-300 font-extrabold">%</td><td class="p-2.5 font-extrabold sticky-col-2 bg-rose-200 border-r border-slate-300 text-rose-950 uppercase tracking-tight">DAILY % ABSENT</td>`;
 
       for (let d = 1; d <= daysCount; d++) {
         let dayP = 0;
@@ -1832,30 +1861,35 @@
 
         monthTotalP += dayP;
         monthTotalA += dayA;
-
-        footTotalRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-slate-200 text-slate-500">${opTotal}</td>`;
         const dayWorking = dayP + dayA;
-        footPresentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-emerald-700 border-r border-slate-200">${isWO ? '-' : (dayWorking > 0 ? dayP : '')}</td>`;
-        footAbsentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-rose-700 border-r border-slate-200">${isWO ? '-' : (dayWorking > 0 ? dayA : '')}</td>`;
+
+        fTotCells += `<td class="p-1 text-center font-mono border-r border-slate-200 text-slate-500">${opTotal}</td>`;
+        fPresCells += `<td class="p-1 text-center font-mono font-bold text-emerald-700 border-r border-slate-200">${isWO ? '-' : (dayWorking > 0 ? dayP : '')}</td>`;
+        fAbsCells += `<td class="p-1 text-center font-mono font-bold text-rose-700 border-r border-slate-200">${isWO ? '-' : (dayWorking > 0 ? dayA : '')}</td>`;
 
         if (dayWorking > 0) {
           const pct = ((dayA / dayWorking) * 100).toFixed(1);
           const alertColor = Number(pct) > 12 ? 'text-rose-700 font-black underline' : 'text-emerald-700 font-bold';
-          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-[11px] ${alertColor}">${pct}%</td>`;
+          fPctCells += `<td class="p-1 text-center font-mono border-r border-rose-300 text-[11px] ${alertColor}">${pct}%</td>`;
         } else if (isWO) {
-          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-400 text-[10px]">WO</td>`;
+          fPctCells += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-400 text-[10px]">WO</td>`;
         } else {
-          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-300 text-[10px]"></td>`;
+          fPctCells += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-300 text-[10px]"></td>`;
         }
       }
 
       const mWorking = monthTotalP + monthTotalA;
       const mPct = mWorking > 0 ? ((monthTotalA / mWorking) * 100).toFixed(1) : '0.0';
 
-      footTotalRow.innerHTML += `<td class="p-1 text-center border-l border-slate-200">-</td><td class="p-1 text-center">-</td><td class="p-1 text-center sticky-summary bg-slate-100 border-l border-slate-200">-</td>`;
-      footPresentRow.innerHTML += `<td class="p-1 text-center font-bold text-emerald-800 border-l border-slate-200">${monthTotalP}</td><td class="p-1 text-center">-</td><td class="p-1 text-center sticky-summary bg-emerald-50 border-l border-slate-200">-</td>`;
-      footAbsentRow.innerHTML += `<td class="p-1 text-center border-l border-slate-200">-</td><td class="p-1 text-center font-bold text-rose-800">${monthTotalA}</td><td class="p-1 text-center sticky-summary bg-rose-50 border-l border-slate-200">-</td>`;
-      footPctRow.innerHTML += `<td class="p-2 text-center border-l border-rose-300 font-bold">${monthTotalP}</td><td class="p-2 text-center font-bold">${monthTotalA}</td><td class="p-2 text-center sticky-summary bg-rose-200 border-l border-rose-300 font-extrabold text-rose-950 text-sm">${mPct}%</td>`;
+      fTotCells += `<td class="p-1 text-center border-l border-slate-200">-</td><td class="p-1 text-center">-</td><td class="p-1 text-center sticky-summary bg-slate-100 border-l border-slate-200">-</td>`;
+      fPresCells += `<td class="p-1 text-center font-bold text-emerald-800 border-l border-slate-200">${monthTotalP}</td><td class="p-1 text-center">-</td><td class="p-1 text-center sticky-summary bg-emerald-50 border-l border-slate-200">-</td>`;
+      fAbsCells += `<td class="p-1 text-center border-l border-slate-200">-</td><td class="p-1 text-center font-bold text-rose-800">${monthTotalA}</td><td class="p-1 text-center sticky-summary bg-rose-50 border-l border-slate-200">-</td>`;
+      fPctCells += `<td class="p-2 text-center border-l border-rose-300 font-bold">${monthTotalP}</td><td class="p-2 text-center font-bold">${monthTotalA}</td><td class="p-2 text-center sticky-summary bg-rose-200 border-l border-rose-300 font-extrabold text-rose-950 text-sm">${mPct}%</td>`;
+
+      document.getElementById('footTotalRow').innerHTML = fTotCells;
+      document.getElementById('footPresentRow').innerHTML = fPresCells;
+      document.getElementById('footAbsentRow').innerHTML = fAbsCells;
+      document.getElementById('footPctRow').innerHTML = fPctCells;
     }
 
     
@@ -1885,8 +1919,7 @@
       let dayPresent = 0;
       let dayAbsent = 0;
 
-      const listContainer = document.getElementById('rollCallCardsList');
-      listContainer.innerHTML = '';
+      const cardsHtmlArr = [];
 
       group.operators.forEach((name, opIdx) => {
         const status = gAttendance[opIdx] ? gAttendance[opIdx][rollCallDayIndex] : null;
@@ -1911,55 +1944,52 @@
 
         const isPres = status === 'P';
         const isAbs = status === 'A';
-        const isWO = status === 'WO';
 
-        const card = document.createElement('div');
-        card.className = `p-4 rounded-2xl transition-all duration-200 flex flex-col justify-between card-3d ${
-          isAbs ? 'card-3d-rose ring-1 ring-rose-400/50' :
-          isPres ? 'bg-white' :
-          'bg-slate-50 border-slate-200 text-slate-500'
-        }`;
-
-        card.innerHTML = `
-          <div class="flex items-start justify-between mb-2.5">
-            <div class="flex items-center space-x-2.5">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${
-                isAbs ? 'bg-rose-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-              }">
-                ${initials}
-              </div>
-              <div>
-                <div class="flex items-center gap-1.5">
-                  <h4 class="font-bold text-slate-900 text-sm cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})">${name}</h4>
-                  <button type="button" onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 text-xs p-0.5" title="Edit name">✏️</button>
+        cardsHtmlArr.push(`
+          <div class="p-4 rounded-2xl transition-all duration-150 flex flex-col justify-between card-3d ${
+            isAbs ? 'card-3d-rose ring-1 ring-rose-400/50' : isPres ? 'bg-white' : 'bg-slate-50 border-slate-200 text-slate-500'
+          }">
+            <div class="flex items-start justify-between mb-2.5">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${
+                  isAbs ? 'bg-rose-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                }">
+                  ${initials}
                 </div>
-                <div class="flex items-center space-x-1.5 text-[11px] text-slate-500">
-                  <span class="font-semibold text-slate-700">${group.name}</span>
-                  <span>•</span>
-                  <span>MTD: <strong class="${opTotalA > 3 ? 'text-rose-600 font-bold' : 'text-slate-700'}">${opTotalA} Abs (${opPct}%)</strong></span>
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <h4 class="font-bold text-slate-900 text-sm cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})">${name}</h4>
+                    <button type="button" onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 text-xs p-0.5" title="Edit name">✏️</button>
+                  </div>
+                  <div class="flex items-center space-x-1.5 text-[11px] text-slate-500">
+                    <span class="font-semibold text-slate-700">${group.name}</span>
+                    <span>•</span>
+                    <span>MTD: <strong class="${opTotalA > 3 ? 'text-rose-600 font-bold' : 'text-slate-700'}">${opTotalA} Abs (${opPct}%)</strong></span>
+                  </div>
                 </div>
               </div>
+              <span class="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#${opIdx + 1}</span>
             </div>
-            <span class="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#${opIdx + 1}</span>
-          </div>
 
-          <div class="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-200/60">
-            <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'P')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
-              isPres ? 'bg-emerald-600 text-white btn-3d-emerald ring-2 ring-emerald-400' : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 btn-3d-neutral'
-            }">
-              <span>✓</span>
-              <span>Present</span>
-            </button>
-            <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'A')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
-              isAbs ? 'bg-rose-600 text-white btn-3d-rose ring-2 ring-rose-400' : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 btn-3d-neutral'
-            }">
-              <span>✗</span>
-              <span>Absent</span>
-            </button>
+            <div class="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-200/60">
+              <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'P')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
+                isPres ? 'bg-emerald-600 text-white btn-3d-emerald ring-2 ring-emerald-400' : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 btn-3d-neutral'
+              }">
+                <span>✓</span>
+                <span>Present</span>
+              </button>
+              <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'A')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
+                isAbs ? 'bg-rose-600 text-white btn-3d-rose ring-2 ring-rose-400' : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 btn-3d-neutral'
+              }">
+                <span>✗</span>
+                <span>Absent</span>
+              </button>
+            </div>
           </div>
-        `;
-        listContainer.appendChild(card);
+        `);
       });
+
+      document.getElementById('rollCallCardsList').innerHTML = cardsHtmlArr.join('');
 
       const totalWork = dayPresent + dayAbsent;
       const pct = totalWork > 0 ? ((dayAbsent / totalWork) * 100).toFixed(1) : '0.0';
@@ -1974,10 +2004,13 @@
       if (!mData[groupId][opIdx]) mData[groupId][opIdx] = [];
       mData[groupId][opIdx][dayIdx] = status;
 
-      saveToStorage();
-      renderGroupMatrix(groupId);
-      renderMobileRollCallCards(groupId);
-      updateKpiDashboard();
+      debouncedSaveToStorage();
+      if (currentMatrixViewMode === 'cards') {
+        renderMobileRollCallCards(groupId);
+      } else {
+        renderGroupMatrix(groupId);
+      }
+      if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
     };
 
     // --- CELL CLICK TOGGLE ---
@@ -1992,9 +2025,9 @@
       else if (current === 'WO') mData[groupId][opIdx][dayIdx] = 'P';
       else mData[groupId][opIdx][dayIdx] = 'P'; // From Blank -> Present
 
-      saveToStorage();
+      debouncedSaveToStorage();
       renderGroupMatrix(groupId);
-      updateKpiDashboard();
+      if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
     };
 
     
@@ -2664,16 +2697,20 @@
       });
 
       // 3. Live Clock updates
+      let lastClockStr = '';
       function updateClock() {
         const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-GB');
-        document.getElementById('liveClock').textContent = timeStr;
-
-        if (now.getHours() === 17 && now.getMinutes() === 0 && now.getSeconds() === 0) {
-          openCheckinModal();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        if (timeStr !== lastClockStr) {
+          lastClockStr = timeStr;
+          const el = document.getElementById('liveClock');
+          if (el) el.textContent = timeStr;
+          if (now.getHours() === 17 && now.getMinutes() === 0 && now.getSeconds() <= 10) {
+            openCheckinModal();
+          }
         }
       }
-      setInterval(updateClock, 1000);
+      setInterval(updateClock, 5000);
       updateClock();
 
       // 4. 5:00 PM Check-In Buttons
@@ -2958,11 +2995,15 @@
       const searchInput = document.getElementById('rollCallSearchInput');
       const clearSearchBtn = document.getElementById('clearRollCallSearchBtn');
       if (searchInput && clearSearchBtn) {
+        let searchDebounceTimer = null;
         searchInput.addEventListener('input', (e) => {
-          rollCallSearchQuery = e.target.value.trim().toLowerCase();
-          clearSearchBtn.classList.toggle('hidden', !rollCallSearchQuery);
-          const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
-          renderMobileRollCallCards(gNum);
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(() => {
+            rollCallSearchQuery = e.target.value.trim().toLowerCase();
+            clearSearchBtn.classList.toggle('hidden', !rollCallSearchQuery);
+            const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+            renderMobileRollCallCards(gNum);
+          }, 120);
         });
 
         clearSearchBtn.addEventListener('click', () => {
@@ -3070,7 +3111,7 @@
   </script>
 
   <!-- MOBILE BOTTOM APP NAVIGATION (Fixed on small screens for native app experience) -->
-  <nav class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl">
+  <nav class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95  border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl">
     <button id="mobNavKpi" class="flex flex-col items-center justify-center py-1 px-2 text-indigo-400 font-bold transition flex-1">
       <span class="text-lg">📊</span>
       <span class="text-[10px] mt-0.5 font-semibold">KPIs</span>
