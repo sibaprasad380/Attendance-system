@@ -1,0 +1,2753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance & KPI Monitoring System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- SheetJS for Multi-Tab & Multi-Month Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .sticky-col-1 {
+      position: sticky;
+      left: 0;
+      z-index: 20;
+    }
+    .sticky-col-2 {
+      position: sticky;
+      left: 48px;
+      z-index: 20;
+    }
+    
+    /* Modern Glassmorphic & Mobile Optimizations */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+    }
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    .sticky-col-shadow {
+      box-shadow: 4px 0 10px -2px rgba(0, 0, 0, 0.07);
+    }
+    /* Hide scrollbars on mobile tab lists while allowing scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .sticky-summary {
+      position: sticky;
+      right: 0;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo and App Title (Cleaned heading without subtitle) -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-xl shadow-inner text-white">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold leading-tight flex items-center gap-2">
+              Attendance & KPI Monitoring System
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Live Sync</span>
+            </h1>
+          </div>
+        </div>
+
+        <!-- Header Actions: Active Month Selector, Clock, 5:00 PM Trigger, Export -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Active Month Selector -->
+          <div class="flex items-center space-x-1.5 bg-slate-800/90 px-2.5 py-1.5 rounded-lg border border-slate-700/80 text-xs">
+            <span class="text-slate-400 font-medium hidden md:inline">📅 Active Month:</span>
+            <select id="activeMonthSelect" class="bg-slate-900 border border-slate-700 text-white font-semibold rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-400 focus:outline-none cursor-pointer">
+              <!-- Dynamically populated with all stored months -->
+            </select>
+          </div>
+
+          <!-- Live Time / 5:00 PM indicator -->
+          <div class="bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700/60 hidden sm:flex items-center space-x-2 text-xs">
+            <div id="liveClockDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+            <span id="liveClock" class="font-mono font-medium text-slate-200">17:00:00</span>
+            <span class="text-slate-400 text-[10px] hidden lg:inline">IST</span>
+          </div>
+
+          <!-- 5:00 PM Check-In CTA Button -->
+          <button id="openPromptBtn" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium text-xs px-3 sm:px-4 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400">
+            <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span class="font-semibold">5:00 PM Daily Check-In</span>
+          </button>
+
+          <!-- Export Excel with Month Selection Button -->
+          <button id="exportExcelBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3 py-2 rounded-lg shadow-sm transition flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export 4-Tab Excel</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- NAVIGATION TABS -->
+      <nav class="flex space-x-1 sm:space-x-4 border-t border-slate-800 pt-1 -mb-px overflow-x-auto">
+        <button id="tabBtnKpi" class="tab-btn active text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-indigo-500 text-white flex items-center space-x-2">
+          <span>📊</span>
+          <span>1. KPI Dashboard</span>
+        </button>
+        <button id="tabBtnG1" class="tab-btn text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+          <span>👥</span>
+          <span>2. Group-01 Attendance</span>
+          <span id="g1Badge" class="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded text-slate-300">15</span>
+        </button>
+        <button id="tabBtnG2" class="tab-btn text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+          <span>👥</span>
+          <span>3. Group-02 Attendance</span>
+          <span id="g2Badge" class="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded text-slate-300">15</span>
+        </button>
+        <button id="tabBtnG3" class="tab-btn text-xs sm:text-sm font-semibold px-3 py-2.5 rounded-t-lg transition border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+          <span>👥</span>
+          <span>4. Group-03 Attendance</span>
+          <span id="g3Badge" class="bg-slate-800 text-[10px] px-1.5 py-0.5 rounded text-slate-300">15</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- DAILY 5:00 PM ALERT BANNER -->
+  <div id="reminderBanner" class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border-b border-amber-200 px-4 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-amber-900 gap-2">
+      <div class="flex items-center space-x-2">
+        <span class="flex h-2.5 w-2.5 relative">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+        </span>
+        <span class="font-semibold text-amber-950">Daily 5:00 PM Shift Roll-Call:</span>
+        <span class="text-amber-800">Got your daily absentee message? Paste names to automatically update all 3 groups and compute KPIs.</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="bannerCheckinBtn" class="bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs px-3 py-1.5 rounded shadow-sm transition">
+          Enter Today's Absentee List
+        </button>
+        <button id="dismissBannerBtn" class="text-amber-700 hover:text-amber-900 text-xs px-1.5 py-1">
+          ✕
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 sm:pb-8">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: KPI DASHBOARD -->
+    <!-- ========================================== -->
+    <section id="viewKpi" class="space-y-6">
+      
+      <!-- Dashboard Subheader with Date Control & Multi-Month Status -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            Attendance Key Performance Indicators (KPIs)
+            <span id="currentMonthBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">November 2026</span>
+          </h2>
+          <p class="text-xs text-slate-500">Live consolidated metrics across Group-1, Group-2, and Group-3 for the active month</p>
+        </div>
+        <div class="flex items-center space-x-3 text-xs">
+          <div class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+            <span class="text-slate-500 font-medium">Selected Date:</span>
+            <input type="date" id="kpiSelectedDate" class="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer">
+          </div>
+          <button id="resetDemoBtn" class="text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg font-medium transition" title="Reset sample factory data across months">
+            ↺ Reset Demo Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Top KPI Metric Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Daily Absent % Today -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
+            <span>Selected Day Absenteeism</span>
+            <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 font-semibold text-[10px]" id="kpiTrendBadge">Target &lt; 5.0%</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span id="kpiTodayAbsentPct" class="text-2xl sm:text-3xl font-extrabold text-rose-600">6.7%</span>
+            <span id="kpiTodayAbsentCount" class="text-xs text-slate-500 font-medium">(3 absent / 45)</span>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
+            <span>Month-to-Date Avg:</span>
+            <span id="kpiMtdAvgPct" class="font-bold text-slate-700">4.9%</span>
+          </div>
+        </div>
+
+        <!-- Total Present Today -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
+            <span>Present On Line</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-semibold text-[10px]">Active</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span id="kpiTodayPresentCount" class="text-2xl sm:text-3xl font-extrabold text-emerald-600">42</span>
+            <span id="kpiTotalManpower" class="text-xs text-slate-500 font-medium">/ 45 Operators</span>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
+            <span>Present Rate:</span>
+            <span id="kpiTodayPresentPct" class="font-bold text-emerald-700">93.3%</span>
+          </div>
+        </div>
+
+        <!-- Highest Absenteeism Group Today -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
+            <span>Critical Group Today</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold text-[10px]">Attention</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span id="kpiCriticalGroup" class="text-xl sm:text-2xl font-extrabold text-amber-600">Group-02</span>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
+            <span>G2 Absent Rate:</span>
+            <span id="kpiCriticalGroupPct" class="font-bold text-amber-700">13.3% (2 Abs)</span>
+          </div>
+        </div>
+
+        <!-- Plant Status / Line Readiness -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center justify-between text-xs text-slate-500 font-medium mb-1">
+            <span>Assembly Line Health</span>
+            <span id="kpiHealthBadge" class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px]">Optimal</span>
+          </div>
+          <div class="flex items-baseline space-x-2">
+            <span id="kpiLineStatus" class="text-xl sm:text-2xl font-extrabold text-slate-800">Manpower 93%</span>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
+            <span>5:00 PM Status:</span>
+            <span id="kpiCheckinStatus" class="font-bold text-emerald-600">Updated Today</span>
+          </div>
+          <div class="mt-1 text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Month Storage:</span>
+            <span id="kpiMonthRecordCount" class="font-bold text-indigo-600">3 Months Logged</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Group Breakdown Mini Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Group 1 Status Card -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">G1</div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Group-01 Assembly</h4>
+              <p class="text-xs text-slate-500" id="g1CardSub">15 Manpower • 1 Absent</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="g1CardPct" class="text-lg font-bold text-slate-800">6.7%</div>
+            <div class="text-[10px] text-slate-500">Daily Absent %</div>
+          </div>
+        </div>
+
+        <!-- Group 2 Status Card -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">G2</div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Group-02 Sub-Assembly</h4>
+              <p class="text-xs text-slate-500" id="g2CardSub">15 Manpower • 2 Absent</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="g2CardPct" class="text-lg font-bold text-amber-600">13.3%</div>
+            <div class="text-[10px] text-slate-500">Daily Absent %</div>
+          </div>
+        </div>
+
+        <!-- Group 3 Status Card -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">G3</div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Group-03 Testing & Fitment</h4>
+              <p class="text-xs text-slate-500" id="g3CardSub">15 Manpower • 0 Absent</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div id="g3CardPct" class="text-lg font-bold text-emerald-600">0.0%</div>
+            <div class="text-[10px] text-slate-500">Daily Absent %</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts & High Absenteeism Leaderboard -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Daily Absenteeism Trend Chart (2 columns) -->
+        <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <span>Daily Absenteeism % Trend</span>
+                <span id="chartMonthLabel" class="text-xs font-normal text-slate-500">(November 2026)</span>
+              </h3>
+              <p class="text-xs text-slate-500">Daily absenteeism percentage plotted across day 1 to end of month with target benchmark</p>
+            </div>
+            <div class="flex items-center space-x-2 text-xs">
+              <span class="inline-flex items-center text-slate-600"><span class="w-3 h-0.5 bg-rose-500 mr-1.5 inline-block"></span> Daily %</span>
+              <span class="inline-flex items-center text-slate-600"><span class="w-3 h-0.5 bg-slate-400 mr-1.5 inline-block border-t border-dashed"></span> Target (5%)</span>
+            </div>
+          </div>
+          <!-- Chart Container with strict fixed height -->
+          <div class="relative h-72 w-full flex-1">
+            <canvas id="dailyAbsentChart"></canvas>
+          </div>
+        </div>
+
+        <!-- High Absenteeism Leaderboard (1 column) -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base">High Absenteeism Manpower</h3>
+              <p class="text-xs text-slate-500">Top operators requiring counseling or backup</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700">Ranked</span>
+          </div>
+
+          <!-- Leaderboard List -->
+          <div class="flex-1 overflow-y-auto max-h-72 divide-y divide-slate-100 pr-1">
+            <div id="highAbsenteeismList" class="space-y-2">
+              <!-- Dynamically populated via JS -->
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+            <span>Threshold for critical review:</span>
+            <span class="font-bold text-rose-600">&gt; 3 Days Absent</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Group Comparison & Operational Insights Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Group Comparison Bar Chart -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+          <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Group-wise Average Absenteeism Comparison</h3>
+          <p class="text-xs text-slate-500 mb-4">Comparing Group-01, Group-02, and Group-03 monthly average</p>
+          <div class="relative h-60 w-full">
+            <canvas id="groupComparisonChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Operational Insights & Action Plan -->
+        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Shift Supervisor Action Points</h3>
+            <p class="text-xs text-slate-500 mb-4">Automated recommendations based on current attendance patterns</p>
+            
+            <div class="space-y-3" id="supervisorInsights">
+              <div class="flex items-start space-x-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs">
+                <span class="text-amber-600 text-base">⚠️</span>
+                <div>
+                  <strong class="text-amber-900 font-semibold block">Group-02 Reallocation Warning</strong>
+                  <span class="text-amber-800">Group-02 absenteeism is currently highest. Suggest deploying 1 flexi-reliever from Group-03 to balance TAKT time on sub-assembly.</span>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs">
+                <span class="text-blue-600 text-base">ℹ️</span>
+                <div>
+                  <strong class="text-blue-900 font-semibold block">Multi-Month Retention Enabled</strong>
+                  <span class="text-blue-800">Attendance data is preserved for every month. You can switch between months anytime or export month-wise Excel sheets.</span>
+                </div>
+              </div>
+              <div class="flex items-start space-x-3 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs">
+                <span class="text-emerald-600 text-base">✅</span>
+                <div>
+                  <strong class="text-emerald-900 font-semibold block">Group-03 Full Strength Adherence</strong>
+                  <span class="text-emerald-800">Group-03 maintained 100% attendance on 6 out of the last 7 working days. Excellent stability.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Active Record: <span id="lastCalculatedTime" class="font-medium text-slate-700">November 2026</span></span>
+            <button id="recalculateKpisBtn" class="text-indigo-600 hover:text-indigo-800 font-semibold">
+              Force Recalculate ↻
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2, 3, 4: GROUP ATTENDANCE MATRICES -->
+    <!-- ========================================== -->
+    <section id="viewGroupMatrix" class="hidden space-y-6">
+      
+      <!-- Group Header and Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span id="groupTabTitleBadge" class="bg-indigo-600 text-white font-bold text-xs px-2.5 py-1 rounded-md">GROUP-01</span>
+            <h2 id="groupTabTitle" class="text-lg font-bold text-slate-900">Group-01 Attendance Sheet</h2>
+            <span id="matrixMonthBadge" class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700">Nov 2026</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">Operator-wise Present (P) / Absent (A) with Daily % Absent row calculated at bottom</p>
+        </div>
+
+        <!-- Matrix Controls: Quick actions, Add Operator, View Switcher -->
+        <div class="flex flex-wrap items-center gap-2 text-xs w-full sm:w-auto justify-between sm:justify-end">
+          <!-- Mobile View Switcher (Matrix vs Roll-Call Cards) -->
+          <div class="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+            <button id="viewModeMatrixBtn" class="bg-white text-indigo-700 font-bold px-3 py-1.5 rounded shadow-sm transition flex items-center gap-1">
+              <span>📊</span> <span class="hidden xs:inline">Month</span> Grid
+            </button>
+            <button id="viewModeCardsBtn" class="text-slate-600 hover:text-slate-900 font-medium px-3 py-1.5 rounded transition flex items-center gap-1">
+              <span>📱</span> Mobile Roll-Call
+            </button>
+          </div>
+
+          <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg">
+            <button id="jumpTodayBtn" class="bg-white text-indigo-600 hover:text-indigo-800 px-2.5 py-1.5 rounded shadow-sm font-semibold transition" title="Scroll horizontally to today's column">
+              📍 Jump to Today
+            </button>
+            <button id="markAllPresentBtn" class="bg-white text-slate-700 hover:text-emerald-700 px-2.5 py-1.5 rounded shadow-sm font-medium transition" title="Mark all operators in this group Present for selected date">
+              ✓ All Present Today
+            </button>
+            <button id="addOperatorBtn" class="bg-white text-slate-700 hover:text-indigo-700 px-2.5 py-1.5 rounded shadow-sm font-medium transition">
+              + Add Operator
+            </button>
+            <button id="manageRosterBtn" class="bg-white text-slate-700 hover:text-indigo-700 px-2.5 py-1.5 rounded shadow-sm font-medium transition flex items-center gap-1">
+              <span>📝</span> Edit Roster
+            </button>
+          </div>
+          <button id="switchToKpiBtn" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1">
+            <span>View KPIs</span> →
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Legend & Instructions -->
+      <div class="flex items-center justify-between text-xs bg-slate-100 px-4 py-2 rounded-lg text-slate-600">
+        <div class="flex items-center space-x-4">
+          <span class="font-medium">Cell Legend:</span>
+          <span class="inline-flex items-center"><span class="w-3 h-3 rounded bg-emerald-500 text-white font-bold text-[9px] flex items-center justify-center mr-1">P</span> Present</span>
+          <span class="inline-flex items-center"><span class="w-3 h-3 rounded bg-rose-500 text-white font-bold text-[9px] flex items-center justify-center mr-1">A</span> Absent</span>
+          <span class="inline-flex items-center"><span class="w-3 h-3 rounded bg-slate-300 text-slate-700 font-bold text-[9px] flex items-center justify-center mr-1">W</span> Weekly Off</span>
+        </div>
+        <span class="text-slate-500 hidden sm:inline">Tip: Click any cell to toggle status between Present and Absent.</span>
+      </div>
+
+      
+      <!-- MOBILE ROLL-CALL VIEW CONTAINER (Optimized for thumb tapping on phone) -->
+      <div id="mobileRollCallContainer" class="hidden space-y-4">
+        <!-- Date navigator for Roll-Call -->
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <button id="prevDayBtn" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+            ◀ Prev Day
+          </button>
+          <div class="text-center">
+            <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wide block" id="rollCallDayOfWeek">TUESDAY</span>
+            <span class="text-sm font-extrabold text-slate-900" id="rollCallDateLabel">Day 10 (Nov 10, 2026)</span>
+          </div>
+          <button id="nextDayBtn" class="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">
+            Next Day ▶
+          </button>
+        </div>
+
+                <!-- Mobile Search & Filter Toolbar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">🔍</span>
+            <input type="text" id="rollCallSearchInput" class="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Search operator in this group...">
+            <button id="clearRollCallSearchBtn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs hidden">✕</button>
+          </div>
+          <div class="flex items-center space-x-1.5 overflow-x-auto text-[11px]">
+            <button id="filterAllBtn" class="px-3 py-1 rounded-full font-bold bg-indigo-600 text-white shadow-sm transition">All</button>
+            <button id="filterAbsentBtn" class="px-3 py-1 rounded-full font-medium bg-slate-100 text-rose-700 hover:bg-rose-50 transition">Absent Only</button>
+            <button id="filterPresentBtn" class="px-3 py-1 rounded-full font-medium bg-slate-100 text-emerald-700 hover:bg-emerald-50 transition">Present Only</button>
+          </div>
+        </div>
+        <!-- Daily Roll-Call Summary Bar -->
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
+            <span class="text-[10px] text-emerald-600 uppercase font-bold block">Present</span>
+            <span id="rollCallPresentCount" class="text-lg font-extrabold text-emerald-700">14</span>
+          </div>
+          <div class="bg-rose-50 border border-rose-200 p-2.5 rounded-xl">
+            <span class="text-[10px] text-rose-600 uppercase font-bold block">Absent</span>
+            <span id="rollCallAbsentCount" class="text-lg font-extrabold text-rose-700">1</span>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
+            <span class="text-[10px] text-amber-700 uppercase font-bold block">Daily %</span>
+            <span id="rollCallPct" class="text-lg font-extrabold text-amber-800">6.7%</span>
+          </div>
+        </div>
+
+        <!-- Operator Cards Grid -->
+        <div id="rollCallCardsList" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Attendance Sheet Table Container -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto max-h-[550px] relative">
+          <table class="w-full text-left text-xs border-collapse" id="attendanceTable">
+            <thead class="bg-slate-900 text-white sticky top-0 z-30">
+              <tr id="tableHeaderRow">
+                <!-- Dynamically built: #, Name, Days 1..31, Total P, Total A, Absent % -->
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-200 bg-white">
+              <!-- Dynamically built operator rows -->
+            </tbody>
+            <tfoot class="sticky bottom-0 z-30 font-bold bg-slate-100 border-t-2 border-slate-300 shadow-lg">
+              <!-- Total Operators Row -->
+              <tr id="footTotalRow" class="text-slate-700 bg-slate-100"></tr>
+              <!-- Daily Present Count Row -->
+              <tr id="footPresentRow" class="text-emerald-700 bg-emerald-50/70"></tr>
+              <!-- Daily Absent Count Row -->
+              <tr id="footAbsentRow" class="text-rose-700 bg-rose-50/70"></tr>
+              <!-- DAILY % ABSENT ROW (Requested by user) -->
+              <tr id="footPctRow" class="text-rose-900 bg-rose-100/90 text-sm border-t border-rose-300"></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL 1: 5:00 PM DAILY ABSENTEEISM INPUT -->
+  <!-- ========================================== -->
+  <div id="checkinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold text-xl shadow-lg">
+            ⏰
+          </div>
+          <div>
+            <h3 class="text-base font-bold flex items-center gap-2">
+              Daily 5:00 PM Absenteeism Input
+              <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-amber-400 text-slate-950">Shift Update</span>
+            </h3>
+            <p class="text-xs text-slate-300">Paste your daily message or select absent operators</p>
+          </div>
+        </div>
+        <button id="closeCheckinModalBtn" class="text-slate-400 hover:text-white transition text-lg p-1">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-5 text-xs sm:text-sm">
+        
+        <!-- Date Selector -->
+        <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <div class="flex items-center space-x-2">
+            <span class="font-semibold text-slate-700">Attendance Date:</span>
+            <input type="date" id="modalInputDate" class="bg-white border border-slate-300 rounded px-2.5 py-1 text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer">
+          </div>
+          <span class="text-xs text-slate-500">Scheduled Prompt: <strong>5:00 PM</strong></span>
+        </div>
+
+        <!-- Message Box with Smart Parser -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label for="pastedMessageInput" class="font-bold text-slate-800 flex items-center gap-1.5">
+              <span>📩 Paste Incoming Message (WhatsApp / SMS / Teams):</span>
+            </label>
+            <span class="text-xs text-slate-400">Smart Name Matching</span>
+          </div>
+          <textarea id="pastedMessageInput" rows="3" class="w-full border border-slate-300 rounded-xl p-3 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none placeholder-slate-400 font-mono" placeholder="Example: Absent today - Ramesh Sharma from G1, Sunil Reddy in Group 2, and Anil Kumar. Or just: Ramesh, Sunil, Anil"></textarea>
+          
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <button id="parseMessageBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition flex items-center space-x-1">
+                <span>⚡ Auto-Detect Names</span>
+              </button>
+              <button id="sampleMsgBtn" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium px-2 py-1">
+                Load Sample Message
+              </button>
+            </div>
+            <span id="detectedCountLabel" class="text-xs text-slate-500 italic">0 names detected</span>
+          </div>
+        </div>
+
+        <!-- Detected / Manual Selection Tabs by Group -->
+        <div class="space-y-3 pt-2 border-t border-slate-100">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wide">Review Absent Operators to Mark:</h4>
+            <span class="text-xs text-slate-500">Unchecked operators will remain Present (P)</span>
+          </div>
+
+          <!-- Group Checklist Container -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+            <!-- Group 1 Checklist -->
+            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+                <span class="font-bold text-blue-700 text-xs">Group-01</span>
+                <span id="modalG1Count" class="text-[10px] text-slate-500">0 selected</span>
+              </div>
+              <div id="modalG1List" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                <!-- Group 1 Checkboxes -->
+              </div>
+            </div>
+
+            <!-- Group 2 Checklist -->
+            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+                <span class="font-bold text-indigo-700 text-xs">Group-02</span>
+                <span id="modalG2Count" class="text-[10px] text-slate-500">0 selected</span>
+              </div>
+              <div id="modalG2List" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                <!-- Group 2 Checkboxes -->
+              </div>
+            </div>
+
+            <!-- Group 3 Checklist -->
+            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50">
+              <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200">
+                <span class="font-bold text-emerald-700 text-xs">Group-03</span>
+                <span id="modalG3Count" class="text-[10px] text-slate-500">0 selected</span>
+              </div>
+              <div id="modalG3List" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+                <!-- Group 3 Checkboxes -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between">
+        <div class="text-xs text-slate-500">
+          Total to mark Absent: <strong id="modalTotalAbsentSummary" class="text-rose-600 font-bold">0 operators</strong>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="cancelCheckinBtn" class="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-medium">Cancel</button>
+          <button id="confirmCheckinBtn" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition flex items-center space-x-1.5">
+            <span>Update Monthly Sheet & Calculate KPI</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: MONTH-WISE EXPORT EXCEL MODAL -->
+  <!-- ========================================== -->
+  <div id="exportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xl shadow-lg">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Month-wise Excel Export</h3>
+            <p class="text-xs text-slate-300">Choose a month to export all 4 sheets with KPIs and formulas</p>
+          </div>
+        </div>
+        <button id="closeExportModalBtn" class="text-slate-400 hover:text-white transition text-lg p-1">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-4 text-xs sm:text-sm">
+        
+        <!-- Month Picker -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1.5">Select Month to Export:</label>
+          <select id="exportMonthSelect" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs sm:text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <!-- Export Summary Card -->
+        <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-500">Workbook Format:</span>
+            <span class="font-semibold text-slate-800">Microsoft Excel (.xlsx)</span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-500">Sheets Included:</span>
+            <span class="font-bold text-emerald-700">4 Complete Tabs</span>
+          </div>
+          <ul class="text-[11px] text-slate-600 space-y-1 pl-4 list-disc pt-1 border-t border-slate-200">
+            <li><strong>Tab 1:</strong> KPI Dashboard (Absent %, High Absenteeism Manpower Leaderboard)</li>
+            <li><strong>Tab 2:</strong> Group-01 Attendance Sheet (Days 1..N + Daily % Absent)</li>
+            <li><strong>Tab 3:</strong> Group-02 Attendance Sheet (Days 1..N + Daily % Absent)</li>
+            <li><strong>Tab 4:</strong> Group-03 Attendance Sheet (Days 1..N + Daily % Absent)</li>
+          </ul>
+        </div>
+
+        <!-- Multi-Month Bulk Option -->
+        <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+          <div>
+            <strong class="text-xs font-semibold text-indigo-950 block">Export All Stored Months?</strong>
+            <span class="text-[11px] text-indigo-700">Downloads a master workbook containing all recorded months</span>
+          </div>
+          <button id="exportAllMonthsBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition whitespace-nowrap">
+            Export All Months
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-end space-x-2">
+        <button id="cancelExportModalBtn" class="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-medium">Cancel</button>
+        <button id="confirmExportBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition flex items-center space-x-1.5">
+          <span>Download Selected Month (.xlsx)</span>
+          <span>↓</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 3: ADD OPERATOR MODAL -->
+  <!-- ========================================== -->
+  <div id="addOperatorModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base">Add New Operator to Roster</h3>
+        <button id="closeAddOpBtn" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Target Group</label>
+          <select id="newOpGroup" class="w-full border border-slate-300 rounded-lg p-2 font-medium">
+            <option value="1">Group-01</option>
+            <option value="2">Group-02</option>
+            <option value="3">Group-03</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Operator Full Name</label>
+          <input type="text" id="newOpName" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. Ramesh Reddy">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Employee ID / Token (Optional)</label>
+          <input type="text" id="newOpToken" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. EMP-2501">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+        <button id="cancelAddOpBtn" class="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800">Cancel</button>
+        <button id="saveNewOpBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition">
+          Add Operator
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- ========================================== -->
+  <!-- MODAL 4: EDIT OPERATOR MODAL -->
+  <!-- ========================================== -->
+  <div id="editOperatorModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-indigo-600 text-lg">✏️</span>
+          <h3 class="font-bold text-slate-900 text-base">Edit Operator Name & Details</h3>
+        </div>
+        <button id="closeEditOpBtn" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="editOpOriginalGroup" value="1">
+      <input type="hidden" id="editOpOriginalIdx" value="0">
+
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Operator Full Name</label>
+          <input type="text" id="editOpNameInput" class="w-full border border-slate-300 rounded-lg p-2.5 font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Enter updated operator name">
+        </div>
+        <div>
+          <label class="block font-medium text-slate-700 mb-1">Assigned Group</label>
+          <select id="editOpGroupSelect" class="w-full border border-slate-300 rounded-lg p-2 font-medium cursor-pointer">
+            <option value="1">Group-01</option>
+            <option value="2">Group-02</option>
+            <option value="3">Group-03</option>
+          </select>
+          <p class="text-[11px] text-slate-500 mt-1">You can edit the name or transfer the operator to another group.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+        <button id="deleteOpBtn" class="text-rose-600 hover:text-rose-800 text-xs font-semibold px-2 py-1.5 rounded hover:bg-rose-50 transition" title="Remove operator from roster">
+          🗑 Remove Operator
+        </button>
+        <div class="flex items-center space-x-2">
+          <button id="cancelEditOpBtn" class="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-800">Cancel</button>
+          <button id="saveEditOpBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- ========================================== -->
+  <!-- MODAL 5: BATCH MANAGE ROSTER MODAL -->
+  <!-- ========================================== -->
+  <div id="manageRosterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+            📝
+          </div>
+          <div>
+            <h3 id="manageRosterModalTitle" class="text-base font-bold">Edit Group-01 Roster</h3>
+            <p class="text-xs text-slate-300">Quickly edit or rename any operator in this group</p>
+          </div>
+        </div>
+        <button id="closeManageRosterBtn" class="text-slate-400 hover:text-white transition text-lg p-1">✕</button>
+      </div>
+
+      <!-- Modal Body (List of inputs) -->
+      <div class="p-6 overflow-y-auto space-y-3 text-xs sm:text-sm">
+        <div class="text-xs text-slate-500 mb-2 flex items-center justify-between">
+          <span>Edit operator names directly below:</span>
+          <span id="manageRosterCount" class="font-bold text-slate-700">15 Operators</span>
+        </div>
+        <div id="manageRosterList" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between">
+        <button id="manageRosterAddBtn" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+          <span>+ Add New Operator</span>
+        </button>
+        <div class="flex items-center space-x-2">
+          <button id="cancelManageRosterBtn" class="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-medium">Cancel</button>
+          <button id="saveManageRosterBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition">
+            Save All Names
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  
+  <!-- MOBILE FLOATING ACTION BUTTON (5:00 PM Check-In) -->
+  <button id="mobileFabBtn" class="sm:hidden fixed bottom-6 right-5 z-40 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl flex items-center space-x-2 font-bold text-xs ring-4 ring-white/60 active:scale-95 transition-all">
+    <span class="text-base animate-bounce">⏰</span>
+    <span>5:00 PM Check-In</span>
+  </button>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- APPLICATION JAVASCRIPT LOGIC -->
+  <script>
+    // Month Names Helper
+    const MONTH_NAMES = [
+      "January", "February", "March", "April", "May", "June", 
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    // Helper: format YYYY-MM
+    function makeMonthKey(year, monthIndex) {
+      return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    }
+
+    // Days in Month Calculator
+    function calculateDaysInMonth(year, monthIndex) {
+      return new Date(year, monthIndex + 1, 0).getDate();
+    }
+
+    // --- MULTI-MONTH STATE MANAGEMENT ---
+    const APP_STATE = {
+      currentTab: 'kpi', // 'kpi', 'group1', 'group2', 'group3'
+      selectedYear: 2026,
+      selectedMonth: 10, // 0-indexed: 10 = November
+      selectedDate: '2026-11-10',
+      daysInMonth: 30,
+      groups: {
+        1: {
+          name: "Group-01",
+          operators: [
+            "Ramesh Sharma", "Suresh Patil", "Anil Peter", "Sanjay Palande", 
+            "Ravinder Singh", "Javeed Mohammed", "Venkatesh Rao", "Pawan Zanvar",
+            "Bhupathi Rao", "Mahesh Babu", "K. Narsimha", "Ajit Khot", 
+            "Balachandra Prasad", "B. Vinay Kumar", "Dada Dandge"
+          ]
+        },
+        2: {
+          name: "Group-02",
+          operators: [
+            "Rajesh Verma", "Amit Patil", "P. Suresh", "Tushal B.", 
+            "Manisha K.", "Sunil Goud", "Narasimha Reddy", "Wajid Khan", 
+            "Vikas Sharma", "Ganesh Kalsait", "Santosh Kumar", "D. Srinivas", 
+            "K. Ravi Teja", "M. Venkatesh", "Prashant Gala"
+          ]
+        },
+        3: {
+          name: "Group-03",
+          operators: [
+            "Priya Nair", "Sunita Bai", "Laxminarayana V.", "Somasekhar B.", 
+            "Bhartendu Parmar", "Sai Prasad", "Madhu Kandati", "Padamati Komaraiah", 
+            "Siba Prasad Jena", "Kiran Deep", "Harish Chandra", "Manohar Joshi", 
+            "Satish Chander", "Ashok Kumar", "Govind Rao"
+          ]
+        }
+      },
+      // Stores attendance for all months: { "YYYY-MM": { 1: { opIdx: [] }, 2: { ... }, 3: { ... } } }
+      monthlyAttendance: {}
+    };
+
+    // Current Month Key
+    function getActiveMonthKey() {
+      return makeMonthKey(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+    }
+
+    // --- ENSURE DATA EXISTS FOR A MONTH ---
+    function ensureMonthAttendance(year, monthIndex, isSample = false) {
+      const monthKey = makeMonthKey(year, monthIndex);
+      if (!APP_STATE.monthlyAttendance[monthKey]) {
+        APP_STATE.monthlyAttendance[monthKey] = {};
+        const days = calculateDaysInMonth(year, monthIndex);
+
+        [1, 2, 3].forEach(gId => {
+          APP_STATE.monthlyAttendance[monthKey][gId] = {};
+          const opList = APP_STATE.groups[gId].operators;
+
+          opList.forEach((_, opIdx) => {
+            const row = [];
+            for (let d = 1; d <= days; d++) {
+              const dateObj = new Date(year, monthIndex, d);
+              const isSunday = dateObj.getDay() === 0;
+
+              if (isSunday) {
+                row.push('WO'); // Weekly off
+              } else if (isSample) {
+                // Realistic factory attendance pattern
+                let absentRate = 0.04;
+                if (gId === 2) absentRate = 0.08;
+                if (opIdx === 1 || opIdx === 3) absentRate = 0.20;
+
+                const pseudoRand = ((opIdx * 19 + d * 31 + gId * 11 + monthIndex * 7) % 100) / 100;
+                row.push(pseudoRand < absentRate ? 'A' : 'P');
+              } else {
+                row.push('P'); // Default present
+              }
+            }
+            APP_STATE.monthlyAttendance[monthKey][gId][opIdx] = row;
+          });
+        });
+      }
+      return APP_STATE.monthlyAttendance[monthKey];
+    }
+
+    // --- INITIALIZE MULTI-MONTH SAMPLE DATA ---
+    function initializeMultiMonthData() {
+      APP_STATE.monthlyAttendance = {};
+      // Pre-populate September 2026, October 2026, and November 2026
+      ensureMonthAttendance(2026, 8, true);  // Sep 2026
+      ensureMonthAttendance(2026, 9, true);  // Oct 2026
+      ensureMonthAttendance(2026, 10, true); // Nov 2026
+
+      APP_STATE.selectedYear = 2026;
+      APP_STATE.selectedMonth = 10; // November
+      APP_STATE.daysInMonth = calculateDaysInMonth(2026, 10);
+      APP_STATE.selectedDate = '2026-11-10';
+
+      saveToStorage();
+    }
+
+    // --- LOCAL STORAGE HANDLING ---
+    function saveToStorage() {
+      try {
+        localStorage.setItem('ATTENDANCE_APP_MULTI_MONTH', JSON.stringify({
+          groups: APP_STATE.groups,
+          monthlyAttendance: APP_STATE.monthlyAttendance,
+          selectedYear: APP_STATE.selectedYear,
+          selectedMonth: APP_STATE.selectedMonth,
+          selectedDate: APP_STATE.selectedDate
+        }));
+      } catch (e) {
+        console.warn("Storage quota exceeded or disabled", e);
+      }
+    }
+
+    function loadFromStorage() {
+      try {
+        const raw = localStorage.getItem('ATTENDANCE_APP_MULTI_MONTH');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.monthlyAttendance && Object.keys(parsed.monthlyAttendance).length > 0) {
+            APP_STATE.groups = parsed.groups || APP_STATE.groups;
+            APP_STATE.monthlyAttendance = parsed.monthlyAttendance;
+            if (typeof parsed.selectedYear === 'number') APP_STATE.selectedYear = parsed.selectedYear;
+            if (typeof parsed.selectedMonth === 'number') APP_STATE.selectedMonth = parsed.selectedMonth;
+            if (parsed.selectedDate) APP_STATE.selectedDate = parsed.selectedDate;
+            APP_STATE.daysInMonth = calculateDaysInMonth(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+            return true;
+          }
+        }
+      } catch (e) {
+        console.warn("Error reading storage", e);
+      }
+      return false;
+    }
+
+    // --- SOUND / CHIME HELPER ---
+    function playChime() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.exponentialRampToValueAtTime(880.00, audioCtx.currentTime + 0.15); // A5
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      } catch (err) {}
+    }
+
+    // --- TOAST NOTIFICATIONS ---
+    function showToast(title, message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `p-3.5 rounded-xl shadow-xl border text-xs sm:text-sm flex items-start space-x-3 transition-all duration-300 transform translate-y-2 pointer-events-auto max-w-sm ${
+        type === 'success' ? 'bg-slate-900 text-white border-slate-700' : 
+        type === 'warning' ? 'bg-amber-900 text-white border-amber-700' : 'bg-rose-900 text-white border-rose-700'
+      }`;
+
+      const icon = type === 'success' ? '✓' : type === 'warning' ? '⚠️' : '✕';
+      toast.innerHTML = `
+        <span class="font-bold text-emerald-400 text-sm">${icon}</span>
+        <div>
+          <strong class="block font-semibold">${title}</strong>
+          <span class="text-slate-300 text-xs">${message}</span>
+        </div>
+      `;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // --- SWITCH ACTIVE MONTH ---
+    function switchActiveMonth(year, monthIndex) {
+      APP_STATE.selectedYear = year;
+      APP_STATE.selectedMonth = monthIndex;
+      APP_STATE.daysInMonth = calculateDaysInMonth(year, monthIndex);
+
+      ensureMonthAttendance(year, monthIndex);
+
+      // Adjust selectedDate to be within this month
+      const curDateObj = new Date(APP_STATE.selectedDate);
+      let day = curDateObj.getDate();
+      if (day > APP_STATE.daysInMonth) day = APP_STATE.daysInMonth;
+      APP_STATE.selectedDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+      document.getElementById('kpiSelectedDate').value = APP_STATE.selectedDate;
+
+      // Update badge labels
+      const mName = MONTH_NAMES[monthIndex];
+      document.getElementById('currentMonthBadge').textContent = `${mName} ${year}`;
+      document.getElementById('chartMonthLabel').textContent = `(${mName} ${year})`;
+      document.getElementById('matrixMonthBadge').textContent = `${mName.slice(0, 3)} ${year}`;
+      document.getElementById('lastCalculatedTime').textContent = `${mName} ${year}`;
+
+      saveToStorage();
+      populateMonthDropdowns();
+
+      updateKpiDashboard();
+      if (APP_STATE.currentTab !== 'kpi') {
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderGroupMatrix(gNum);
+      }
+
+      showToast("Month Switched", `Viewing attendance & KPIs for ${mName} ${year}`, "success");
+    }
+
+    // --- POPULATE MONTH DROPDOWNS ---
+    function populateMonthDropdowns() {
+      const activeSelect = document.getElementById('activeMonthSelect');
+      const exportSelect = document.getElementById('exportMonthSelect');
+
+      const activeKey = getActiveMonthKey();
+      const keys = Object.keys(APP_STATE.monthlyAttendance).sort();
+
+      // Ensure active month key is in keys
+      if (!keys.includes(activeKey)) keys.push(activeKey);
+
+      // Offer additional selectable options if user wants to log another month
+      const extraMonths = ["2026-08", "2026-09", "2026-10", "2026-11", "2026-12", "2027-01"];
+      extraMonths.forEach(k => {
+        if (!keys.includes(k)) keys.push(k);
+      });
+      keys.sort();
+
+      // Build options HTML
+      let optionsHtml = '';
+      keys.forEach(k => {
+        const [y, m] = k.split('-').map(Number);
+        const name = `${MONTH_NAMES[m - 1]} ${y}`;
+        const isCurrent = k === activeKey;
+        optionsHtml += `<option value="${k}" ${isCurrent ? 'selected' : ''}>${name} ${k === '2026-11' ? '(Current)' : ''}</option>`;
+      });
+
+      activeSelect.innerHTML = optionsHtml;
+      exportSelect.innerHTML = optionsHtml;
+
+      // Total stored count
+      const storedCount = Object.keys(APP_STATE.monthlyAttendance).length;
+      document.getElementById('kpiMonthRecordCount').textContent = `${storedCount} Months Logged`;
+    }
+
+    // --- KPI CALCULATIONS FOR CURRENT ACTIVE MONTH ---
+    function calculateMetrics(targetDayIndex, year = APP_STATE.selectedYear, monthIndex = APP_STATE.selectedMonth) {
+      const monthKey = makeMonthKey(year, monthIndex);
+      const mData = ensureMonthAttendance(year, monthIndex);
+      const daysCount = calculateDaysInMonth(year, monthIndex);
+
+      let totalManpower = 0;
+      let totalPresentToday = 0;
+      let totalAbsentToday = 0;
+      let groupBreakdown = {};
+
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        const gAttendance = mData[gId] || {};
+        const opCount = group.operators.length;
+        totalManpower += opCount;
+
+        let gPresent = 0;
+        let gAbsent = 0;
+        let gWeeklyOff = 0;
+
+        group.operators.forEach((_, opIdx) => {
+          const status = gAttendance[opIdx] ? gAttendance[opIdx][targetDayIndex] : 'P';
+          if (status === 'P') gPresent++;
+          else if (status === 'A') gAbsent++;
+          else if (status === 'WO') gWeeklyOff++;
+        });
+
+        const workingStaff = (gPresent + gAbsent) || opCount;
+        const gPct = workingStaff > 0 ? (gAbsent / workingStaff * 100) : 0;
+
+        groupBreakdown[gId] = {
+          name: group.name,
+          total: opCount,
+          present: gPresent,
+          absent: gAbsent,
+          isWeeklyOff: gWeeklyOff > (opCount / 2),
+          absentPct: gPct
+        };
+
+        totalPresentToday += gPresent;
+        totalAbsentToday += gAbsent;
+      });
+
+      const totalWorkingToday = totalPresentToday + totalAbsentToday;
+      const overallDailyPct = totalWorkingToday > 0 ? (totalAbsentToday / totalWorkingToday * 100) : 0;
+
+      // Month-to-date daily absent % series for chart
+      const dailyTrend = [];
+      let mtdSumPct = 0;
+      let mtdWorkingDays = 0;
+
+      for (let d = 0; d < daysCount; d++) {
+        let dayP = 0;
+        let dayA = 0;
+        let dayWO = 0;
+
+        [1, 2, 3].forEach(gId => {
+          const group = APP_STATE.groups[gId];
+          const gAttendance = mData[gId] || {};
+          group.operators.forEach((_, opIdx) => {
+            const st = gAttendance[opIdx] ? gAttendance[opIdx][d] : null;
+            if (st === 'P') dayP++;
+            else if (st === 'A') dayA++;
+            else if (st === 'WO') dayWO++;
+          });
+        });
+
+        const dayTotal = dayP + dayA;
+        if (dayTotal > 0) {
+          const pct = (dayA / dayTotal * 100);
+          dailyTrend.push({ day: d + 1, pct: Number(pct.toFixed(1)), isWO: false, present: dayP, absent: dayA });
+          mtdSumPct += pct;
+          mtdWorkingDays++;
+        } else if (dayWO > 0) {
+          dailyTrend.push({ day: d + 1, pct: 0, isWO: true, present: 0, absent: 0 });
+        } else {
+          dailyTrend.push({ day: d + 1, pct: null, isWO: false, present: 0, absent: 0 });
+        }
+      }
+
+      const mtdAvgPct = mtdWorkingDays > 0 ? (mtdSumPct / mtdWorkingDays) : 0;
+
+      // Individual Operator Absenteeism Leaderboard for this month
+      const leaderboard = [];
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        const gAttendance = mData[gId] || {};
+
+        group.operators.forEach((name, opIdx) => {
+          let absDays = 0;
+          let workingDaysAttended = 0;
+
+          if (gAttendance[opIdx]) {
+            gAttendance[opIdx].forEach(st => {
+              if (st === 'A') {
+                absDays++;
+                workingDaysAttended++;
+              } else if (st === 'P') {
+                workingDaysAttended++;
+              }
+            });
+          }
+
+          const opPct = workingDaysAttended > 0 ? (absDays / workingDaysAttended * 100) : 0;
+          leaderboard.push({
+            name,
+            group: group.name,
+            groupId: gId,
+            absentDays: absDays,
+            totalDays: workingDaysAttended,
+            pct: Number(opPct.toFixed(1))
+          });
+        });
+      });
+
+      leaderboard.sort((a, b) => b.absentDays - a.absentDays || b.pct - a.pct);
+
+      return {
+        totalManpower,
+        totalPresentToday,
+        totalAbsentToday,
+        overallDailyPct: Number(overallDailyPct.toFixed(1)),
+        mtdAvgPct: Number(mtdAvgPct.toFixed(1)),
+        groupBreakdown,
+        dailyTrend,
+        leaderboard
+      };
+    }
+
+    // --- CHART INSTANCES ---
+    let dailyChartInstance = null;
+    let groupChartInstance = null;
+
+    function renderCharts(metrics) {
+      // 1. Daily Absenteeism Trend Line Chart
+      const lineCtx = document.getElementById('dailyAbsentChart');
+      if (lineCtx) {
+        const labels = metrics.dailyTrend.map(d => `D${d.day}`);
+        const dataValues = metrics.dailyTrend.map(d => d.pct);
+        const targetValues = metrics.dailyTrend.map(() => 5.0);
+
+        if (dailyChartInstance) dailyChartInstance.destroy();
+
+        dailyChartInstance = new Chart(lineCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Daily Absent %',
+                data: dataValues,
+                borderColor: '#e11d48',
+                backgroundColor: 'rgba(225, 29, 72, 0.08)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                spanGaps: false
+              },
+              {
+                label: 'Target KPI (5.0%)',
+                data: targetValues,
+                borderColor: '#94a3b8',
+                borderWidth: 1.5,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    if (context.parsed.y === null) return 'No data logged';
+                    return `Absenteeism: ${context.parsed.y}%`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: Math.max(15, Math.ceil(Math.max(...dataValues.filter(v => v !== null), 6) + 3)),
+                ticks: { callback: v => v + '%' },
+                grid: { color: '#f1f5f9' }
+              },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 2. Group Comparison Bar Chart
+      const barCtx = document.getElementById('groupComparisonChart');
+      if (barCtx) {
+        const gLabels = ['Group-01', 'Group-02', 'Group-03'];
+        const gData = [
+          metrics.groupBreakdown[1].absentPct.toFixed(1),
+          metrics.groupBreakdown[2].absentPct.toFixed(1),
+          metrics.groupBreakdown[3].absentPct.toFixed(1)
+        ];
+
+        if (groupChartInstance) groupChartInstance.destroy();
+
+        groupChartInstance = new Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: gLabels,
+            datasets: [{
+              label: "Daily Absent %",
+              data: gData,
+              backgroundColor: ['#3b82f6', '#6366f1', '#10b981'],
+              borderRadius: 6,
+              barThickness: 36
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: v => v + '%' },
+                grid: { color: '#f1f5f9' }
+              },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+    }
+
+    // --- RENDER KPI DASHBOARD VIEW ---
+    function updateKpiDashboard() {
+      const selectedDay = new Date(APP_STATE.selectedDate).getDate();
+      const metrics = calculateMetrics(selectedDay - 1);
+
+      // Top Cards
+      document.getElementById('kpiTodayAbsentPct').textContent = `${metrics.overallDailyPct}%`;
+      document.getElementById('kpiTodayAbsentCount').textContent = `(${metrics.totalAbsentToday} absent / ${metrics.totalManpower})`;
+      document.getElementById('kpiMtdAvgPct').textContent = `${metrics.mtdAvgPct}%`;
+
+      document.getElementById('kpiTodayPresentCount').textContent = metrics.totalPresentToday;
+      document.getElementById('kpiTotalManpower').textContent = `/ ${metrics.totalManpower} Operators`;
+      const presentRate = metrics.totalManpower > 0 ? (metrics.totalPresentToday / metrics.totalManpower * 100).toFixed(1) : 0;
+      document.getElementById('kpiTodayPresentPct').textContent = `${presentRate}%`;
+
+      // Critical Group
+      let highestG = 1;
+      let highestPct = -1;
+      [1, 2, 3].forEach(gId => {
+        if (metrics.groupBreakdown[gId].absentPct > highestPct) {
+          highestPct = metrics.groupBreakdown[gId].absentPct;
+          highestG = gId;
+        }
+      });
+      document.getElementById('kpiCriticalGroup').textContent = APP_STATE.groups[highestG].name;
+      document.getElementById('kpiCriticalGroupPct').textContent = `${highestPct.toFixed(1)}% (${metrics.groupBreakdown[highestG].absent} Abs)`;
+
+      // Group Mini Cards
+      document.getElementById('g1CardSub').textContent = `${APP_STATE.groups[1].operators.length} Manpower • ${metrics.groupBreakdown[1].absent} Absent`;
+      document.getElementById('g1CardPct').textContent = `${metrics.groupBreakdown[1].absentPct.toFixed(1)}%`;
+      document.getElementById('g2CardSub').textContent = `${APP_STATE.groups[2].operators.length} Manpower • ${metrics.groupBreakdown[2].absent} Absent`;
+      document.getElementById('g2CardPct').textContent = `${metrics.groupBreakdown[2].absentPct.toFixed(1)}%`;
+      document.getElementById('g3CardSub').textContent = `${APP_STATE.groups[3].operators.length} Manpower • ${metrics.groupBreakdown[3].absent} Absent`;
+      document.getElementById('g3CardPct').textContent = `${metrics.groupBreakdown[3].absentPct.toFixed(1)}%`;
+
+      // Top Absenteeism Manpower Table
+      const listEl = document.getElementById('highAbsenteeismList');
+      listEl.innerHTML = '';
+
+      metrics.leaderboard.slice(0, 7).forEach((op, idx) => {
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition border border-transparent hover:border-slate-100 text-xs';
+        
+        const rankColor = idx === 0 ? 'bg-rose-500 text-white' : idx === 1 ? 'bg-orange-500 text-white' : idx === 2 ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-700';
+        const badgeColor = op.pct > 15 ? 'bg-rose-100 text-rose-800 border-rose-200' : op.pct > 8 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-700 border-slate-200';
+
+        item.innerHTML = `
+          <div class="flex items-center space-x-2.5">
+            <span class="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${rankColor}">${idx + 1}</span>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <strong class="font-semibold text-slate-800 block cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorByName('${op.name.replace(/'/g, "\\'")}')" title="Click to edit">${op.name}</strong>
+                <button type="button" onclick="openEditOperatorByName('${op.name.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-indigo-600 text-[11px] p-0.5" title="Edit name">✏️</button>
+              </div>
+              <span class="text-[10px] text-slate-400 font-medium">${op.group}</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold border ${badgeColor}">${op.absentDays} Days (${op.pct}%)</span>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+
+      renderCharts(metrics);
+    }
+
+    // --- RENDER GROUP ATTENDANCE TABLE MATRIX ---
+    function renderGroupMatrix(groupId) {
+      const group = APP_STATE.groups[groupId];
+      const monthKey = getActiveMonthKey();
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      const gAttendance = mData[groupId] || {};
+      const daysCount = APP_STATE.daysInMonth;
+      const todayDate = new Date().getDate();
+      const isViewingCurrentMonth = (new Date().getMonth() === APP_STATE.selectedMonth && new Date().getFullYear() === APP_STATE.selectedYear);
+
+      // Update Header Titles
+      document.getElementById('groupTabTitleBadge').textContent = group.name.toUpperCase();
+      document.getElementById('groupTabTitle').textContent = `${group.name} Monthly Attendance Sheet`;
+      document.getElementById('matrixMonthBadge').textContent = `${MONTH_NAMES[APP_STATE.selectedMonth]} ${APP_STATE.selectedYear}`;
+
+      // 1. Build Header Row
+      const headerRow = document.getElementById('tableHeaderRow');
+      headerRow.innerHTML = `
+        <th class="p-2.5 w-12 text-center sticky-col-1 bg-slate-900 border-r border-slate-800">#</th>
+        <th class="p-2.5 w-44 text-left sticky-col-2 bg-slate-900 border-r border-slate-800">Operator Name</th>
+      `;
+
+      for (let d = 1; d <= daysCount; d++) {
+        const dateObj = new Date(APP_STATE.selectedYear, APP_STATE.selectedMonth, d);
+        const dayOfWeek = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][dateObj.getDay()];
+        const isSun = dateObj.getDay() === 0;
+        const isToday = isViewingCurrentMonth && (d === todayDate);
+
+        const th = document.createElement('th');
+        th.className = `p-1.5 w-9 text-center border-r border-slate-800 ${isSun ? 'bg-slate-800 text-rose-400' : ''} ${isToday ? 'bg-indigo-800 text-white font-bold ring-2 ring-indigo-400' : ''}`;
+        th.innerHTML = `
+          <div class="text-[10px] uppercase font-normal">${dayOfWeek}</div>
+          <div class="text-xs font-semibold">${d}</div>
+        `;
+        headerRow.appendChild(th);
+      }
+
+      headerRow.innerHTML += `
+        <th class="p-2.5 w-16 text-center bg-emerald-950 text-emerald-300 border-l border-slate-800">Pres (P)</th>
+        <th class="p-2.5 w-16 text-center bg-rose-950 text-rose-300">Abs (A)</th>
+        <th class="p-2.5 w-20 text-center sticky-summary bg-slate-900 border-l border-slate-800">Absent %</th>
+      `;
+
+      // 2. Build Body Rows (Operators)
+      const tableBody = document.getElementById('tableBody');
+      tableBody.innerHTML = '';
+
+      group.operators.forEach((name, opIdx) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-indigo-50/40 transition border-b border-slate-200';
+
+        let pCount = 0;
+        let aCount = 0;
+
+        let cellsHtml = `
+          <td class="p-2 text-center text-slate-500 font-mono text-[11px] sticky-col-1 bg-white border-r border-slate-200">${opIdx + 1}</td>
+          <td class="p-2 font-medium text-slate-800 sticky-col-2 bg-white border-r border-slate-200 sticky-col-shadow max-w-[190px]">
+            <div class="flex items-center justify-between group">
+              <span class="truncate cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})" title="Click to edit operator name: ${name}">${name}</span>
+              <button onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 opacity-60 group-hover:opacity-100 p-1 rounded transition text-xs flex-shrink-0" title="Edit operator name">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            </div>
+          </td>
+        `;
+
+        for (let d = 1; d <= daysCount; d++) {
+          const status = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : null;
+          if (status === 'P') pCount++;
+          if (status === 'A') aCount++;
+
+          let cellClass = 'bg-white text-slate-400';
+          let label = '-';
+
+          if (status === 'P') {
+            cellClass = 'bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200';
+            label = 'P';
+          } else if (status === 'A') {
+            cellClass = 'bg-rose-100 text-rose-800 font-extrabold hover:bg-rose-200 ring-1 ring-rose-400/50';
+            label = 'A';
+          } else if (status === 'WO') {
+            cellClass = 'bg-slate-100 text-slate-400 font-medium';
+            label = 'WO';
+          }
+
+          cellsHtml += `
+            <td class="p-0.5 text-center border-r border-slate-200">
+              <button onclick="toggleAttendance(${groupId}, ${opIdx}, ${d - 1})" class="w-7 h-7 rounded text-[11px] flex items-center justify-center mx-auto transition cursor-pointer select-none ${cellClass}" title="${name} - Day ${d}: ${status || 'Not Recorded'}">
+                ${label}
+              </button>
+            </td>
+          `;
+        }
+
+        const workingDays = pCount + aCount;
+        const opPct = workingDays > 0 ? ((aCount / workingDays) * 100).toFixed(1) : '0.0';
+        const pctBadge = aCount > 3 ? 'text-rose-600 font-bold' : 'text-slate-700';
+
+        cellsHtml += `
+          <td class="p-2 text-center font-bold text-emerald-700 bg-emerald-50/50 border-l border-slate-200">${pCount}</td>
+          <td class="p-2 text-center font-bold text-rose-700 bg-rose-50/50">${aCount}</td>
+          <td class="p-2 text-center font-bold sticky-summary bg-white border-l border-slate-200 ${pctBadge}">${opPct}%</td>
+        `;
+
+        row.innerHTML = cellsHtml;
+        tableBody.appendChild(row);
+      });
+
+      // 3. Build Footer Rows (DAILY TOTALS & DAILY % ABSENT)
+      const footTotalRow = document.getElementById('footTotalRow');
+      const footPresentRow = document.getElementById('footPresentRow');
+      const footAbsentRow = document.getElementById('footAbsentRow');
+      const footPctRow = document.getElementById('footPctRow');
+
+      footTotalRow.innerHTML = `<td class="p-2 text-center sticky-col-1 bg-slate-100 border-r border-slate-200">Σ</td><td class="p-2 font-bold sticky-col-2 bg-slate-100 border-r border-slate-200">Total Operators</td>`;
+      footPresentRow.innerHTML = `<td class="p-2 text-center sticky-col-1 bg-emerald-100 border-r border-slate-200">✓</td><td class="p-2 font-bold sticky-col-2 bg-emerald-100 border-r border-slate-200">Daily Present Count</td>`;
+      footAbsentRow.innerHTML = `<td class="p-2 text-center sticky-col-1 bg-rose-100 border-r border-slate-200">✗</td><td class="p-2 font-bold sticky-col-2 bg-rose-100 border-r border-slate-200">Daily Absent Count</td>`;
+      footPctRow.innerHTML = `<td class="p-2.5 text-center sticky-col-1 bg-rose-200 border-r border-slate-300 font-extrabold">%</td><td class="p-2.5 font-extrabold sticky-col-2 bg-rose-200 border-r border-slate-300 text-rose-950 uppercase tracking-tight">DAILY % ABSENT</td>`;
+
+      const opTotal = group.operators.length;
+      let monthTotalP = 0;
+      let monthTotalA = 0;
+
+      for (let d = 1; d <= daysCount; d++) {
+        let dayP = 0;
+        let dayA = 0;
+        let isWO = false;
+
+        group.operators.forEach((_, opIdx) => {
+          const st = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : null;
+          if (st === 'P') dayP++;
+          if (st === 'A') dayA++;
+          if (st === 'WO') isWO = true;
+        });
+
+        monthTotalP += dayP;
+        monthTotalA += dayA;
+
+        footTotalRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-slate-200 text-slate-500">${opTotal}</td>`;
+        footPresentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-emerald-700 border-r border-slate-200">${isWO ? '-' : dayP}</td>`;
+        footAbsentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-rose-700 border-r border-slate-200">${isWO ? '-' : dayA}</td>`;
+
+        const dayWorking = dayP + dayA;
+        if (dayWorking > 0) {
+          const pct = ((dayA / dayWorking) * 100).toFixed(1);
+          const alertColor = Number(pct) > 10 ? 'text-rose-700 font-black underline' : Number(pct) > 5 ? 'text-amber-700 font-bold' : 'text-slate-800 font-semibold';
+          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-[11px] ${alertColor}">${pct}%</td>`;
+        } else if (isWO) {
+          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-400 text-[10px]">WO</td>`;
+        } else {
+          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-300 text-[10px]">-</td>`;
+        }
+      }
+
+      const mWorking = monthTotalP + monthTotalA;
+      const mPct = mWorking > 0 ? ((monthTotalA / mWorking) * 100).toFixed(1) : '0.0';
+
+      footTotalRow.innerHTML += `<td class="p-1 text-center border-l border-slate-200">-</td><td class="p-1 text-center">-</td><td class="p-1 text-center sticky-summary bg-slate-100 border-l border-slate-200">-</td>`;
+      footPresentRow.innerHTML += `<td class="p-1 text-center font-bold text-emerald-800 border-l border-slate-200">${monthTotalP}</td><td class="p-1 text-center">-</td><td class="p-1 text-center sticky-summary bg-emerald-50 border-l border-slate-200">-</td>`;
+      footAbsentRow.innerHTML += `<td class="p-1 text-center border-l border-slate-200">-</td><td class="p-1 text-center font-bold text-rose-800">${monthTotalA}</td><td class="p-1 text-center sticky-summary bg-rose-50 border-l border-slate-200">-</td>`;
+      footPctRow.innerHTML += `<td class="p-2 text-center border-l border-rose-300 font-bold">${monthTotalP}</td><td class="p-2 text-center font-bold">${monthTotalA}</td><td class="p-2 text-center sticky-summary bg-rose-200 border-l border-rose-300 font-extrabold text-rose-950 text-sm">${mPct}%</td>`;
+    }
+
+    
+    // --- MOBILE ROLL-CALL CARDS LOGIC ---
+    let currentMatrixViewMode = 'matrix';
+    let rollCallDayIndex = new Date(APP_STATE.selectedDate).getDate() - 1;
+
+    let rollCallFilter = 'all'; // 'all', 'absent', 'present'
+    let rollCallSearchQuery = '';
+
+    function renderMobileRollCallCards(groupId) {
+      const group = APP_STATE.groups[groupId];
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      const gAttendance = mData[groupId] || {};
+      const daysCount = APP_STATE.daysInMonth;
+
+      if (rollCallDayIndex < 0) rollCallDayIndex = 0;
+      if (rollCallDayIndex >= daysCount) rollCallDayIndex = daysCount - 1;
+
+      const dateObj = new Date(APP_STATE.selectedYear, APP_STATE.selectedMonth, rollCallDayIndex + 1);
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()];
+      const isSun = dateObj.getDay() === 0;
+
+      document.getElementById('rollCallDayOfWeek').textContent = isSun ? `${dayName} (WEEKLY OFF)` : dayName;
+      document.getElementById('rollCallDateLabel').textContent = `Day ${rollCallDayIndex + 1} (${MONTH_NAMES[APP_STATE.selectedMonth].slice(0, 3)} ${rollCallDayIndex + 1}, ${APP_STATE.selectedYear})`;
+
+      let dayPresent = 0;
+      let dayAbsent = 0;
+
+      const listContainer = document.getElementById('rollCallCardsList');
+      listContainer.innerHTML = '';
+
+      group.operators.forEach((name, opIdx) => {
+        const status = gAttendance[opIdx] ? gAttendance[opIdx][rollCallDayIndex] : 'P';
+        if (status === 'P') dayPresent++;
+        if (status === 'A') dayAbsent++;
+
+        // Filter checks
+        if (rollCallFilter === 'absent' && status !== 'A') return;
+        if (rollCallFilter === 'present' && status !== 'P') return;
+        if (rollCallSearchQuery && !name.toLowerCase().includes(rollCallSearchQuery)) return;
+
+        let opTotalA = 0;
+        let opWorkDays = 0;
+        if (gAttendance[opIdx]) {
+          gAttendance[opIdx].forEach(st => {
+            if (st === 'A') { opTotalA++; opWorkDays++; }
+            else if (st === 'P') opWorkDays++;
+          });
+        }
+        const opPct = opWorkDays > 0 ? ((opTotalA / opWorkDays) * 100).toFixed(1) : '0.0';
+        const initials = name.split(' ').map(p => p[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+
+        const isPres = status === 'P';
+        const isAbs = status === 'A';
+        const isWO = status === 'WO';
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-2xl border transition-all duration-200 flex flex-col justify-between ${
+          isAbs ? 'bg-rose-50/80 border-rose-300 shadow-sm ring-1 ring-rose-400/40' :
+          isPres ? 'bg-white border-slate-200 shadow-sm hover:border-slate-300' :
+          'bg-slate-50 border-slate-200 text-slate-500'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between mb-2.5">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${
+                isAbs ? 'bg-rose-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+              }">
+                ${initials}
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <h4 class="font-bold text-slate-900 text-sm cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})">${name}</h4>
+                  <button type="button" onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 text-xs p-0.5" title="Edit name">✏️</button>
+                </div>
+                <div class="flex items-center space-x-1.5 text-[11px] text-slate-500">
+                  <span class="font-semibold text-slate-700">${group.name}</span>
+                  <span>•</span>
+                  <span>MTD: <strong class="${opTotalA > 3 ? 'text-rose-600 font-bold' : 'text-slate-700'}">${opTotalA} Abs (${opPct}%)</strong></span>
+                </div>
+              </div>
+            </div>
+            <span class="text-xs font-mono font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#${opIdx + 1}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+            <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'P')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
+              isPres ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400' : 'bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700'
+            }">
+              <span>✓</span>
+              <span>Present</span>
+            </button>
+            <button onclick="setOperatorStatus(${groupId}, ${opIdx}, ${rollCallDayIndex}, 'A')" class="py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition touch-target ${
+              isAbs ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400' : 'bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700'
+            }">
+              <span>✗</span>
+              <span>Absent</span>
+            </button>
+          </div>
+        `;
+        listContainer.appendChild(card);
+      });
+
+      const totalWork = dayPresent + dayAbsent;
+      const pct = totalWork > 0 ? ((dayAbsent / totalWork) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('rollCallPresentCount').textContent = dayPresent;
+      document.getElementById('rollCallAbsentCount').textContent = dayAbsent;
+      document.getElementById('rollCallPct').textContent = `${pct}%`;
+    }
+
+    window.setOperatorStatus = function(groupId, opIdx, dayIdx, status) {
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      if (!mData[groupId][opIdx]) mData[groupId][opIdx] = [];
+      mData[groupId][opIdx][dayIdx] = status;
+
+      saveToStorage();
+      renderGroupMatrix(groupId);
+      renderMobileRollCallCards(groupId);
+      updateKpiDashboard();
+    };
+
+    // --- CELL CLICK TOGGLE ---
+    window.toggleAttendance = function(groupId, opIdx, dayIdx) {
+      const monthKey = getActiveMonthKey();
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      if (!mData[groupId][opIdx]) mData[groupId][opIdx] = [];
+
+      const current = mData[groupId][opIdx][dayIdx];
+      if (current === 'P') mData[groupId][opIdx][dayIdx] = 'A';
+      else if (current === 'A') mData[groupId][opIdx][dayIdx] = 'P';
+      else if (current === 'WO') mData[groupId][opIdx][dayIdx] = 'P';
+      else mData[groupId][opIdx][dayIdx] = 'P';
+
+      saveToStorage();
+      renderGroupMatrix(groupId);
+      updateKpiDashboard();
+    };
+
+    
+    // --- EDIT OPERATOR FUNCTIONS ---
+    window.openEditOperatorModal = function(groupId, opIdx) {
+      const group = APP_STATE.groups[groupId];
+      if (!group || !group.operators[opIdx]) return;
+      const currentName = group.operators[opIdx];
+
+      document.getElementById('editOpOriginalGroup').value = groupId;
+      document.getElementById('editOpOriginalIdx').value = opIdx;
+      document.getElementById('editOpNameInput').value = currentName;
+      document.getElementById('editOpGroupSelect').value = groupId;
+
+      document.getElementById('editOperatorModal').classList.remove('hidden');
+    };
+
+    window.openEditOperatorByName = function(name) {
+      for (let gId = 1; gId <= 3; gId++) {
+        const idx = APP_STATE.groups[gId].operators.indexOf(name);
+        if (idx !== -1) {
+          openEditOperatorModal(gId, idx);
+          return;
+        }
+      }
+    };
+
+    function handleSaveEditOperator() {
+      const origGroupId = parseInt(document.getElementById('editOpOriginalGroup').value, 10);
+      const opIdx = parseInt(document.getElementById('editOpOriginalIdx').value, 10);
+      const newName = document.getElementById('editOpNameInput').value.trim();
+      const newGroupId = parseInt(document.getElementById('editOpGroupSelect').value, 10);
+
+      if (!newName) {
+        showToast("Name Required", "Operator name cannot be empty.", "warning");
+        return;
+      }
+
+      const oldName = APP_STATE.groups[origGroupId].operators[opIdx];
+
+      if (origGroupId === newGroupId) {
+        APP_STATE.groups[origGroupId].operators[opIdx] = newName;
+      } else {
+        const targetGroup = APP_STATE.groups[newGroupId];
+        targetGroup.operators.push(newName);
+        const newOpIdx = targetGroup.operators.length - 1;
+
+        Object.keys(APP_STATE.monthlyAttendance).forEach(mKey => {
+          const mData = APP_STATE.monthlyAttendance[mKey];
+          if (mData[origGroupId] && mData[origGroupId][opIdx]) {
+            if (!mData[newGroupId]) mData[newGroupId] = {};
+            mData[newGroupId][newOpIdx] = mData[origGroupId][opIdx];
+            delete mData[origGroupId][opIdx];
+          }
+        });
+
+        APP_STATE.groups[origGroupId].operators.splice(opIdx, 1);
+
+        Object.keys(APP_STATE.monthlyAttendance).forEach(mKey => {
+          const mData = APP_STATE.monthlyAttendance[mKey];
+          if (mData[origGroupId]) {
+            const reindexed = {};
+            APP_STATE.groups[origGroupId].operators.forEach((_, idx) => {
+              const oldKey = idx >= opIdx ? idx + 1 : idx;
+              reindexed[idx] = mData[origGroupId][oldKey] || [];
+            });
+            mData[origGroupId] = reindexed;
+          }
+        });
+      }
+
+      document.getElementById(`g1Badge`).textContent = APP_STATE.groups[1].operators.length;
+      document.getElementById(`g2Badge`).textContent = APP_STATE.groups[2].operators.length;
+      document.getElementById(`g3Badge`).textContent = APP_STATE.groups[3].operators.length;
+
+      saveToStorage();
+      document.getElementById('editOperatorModal').classList.add('hidden');
+
+      updateKpiDashboard();
+      if (APP_STATE.currentTab !== 'kpi') {
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderGroupMatrix(gNum);
+      }
+
+      showToast("Operator Updated", `Updated operator to "${newName}"`, "success");
+    }
+
+    function handleDeleteOperator() {
+      const origGroupId = parseInt(document.getElementById('editOpOriginalGroup').value, 10);
+      const opIdx = parseInt(document.getElementById('editOpOriginalIdx').value, 10);
+      const opName = APP_STATE.groups[origGroupId].operators[opIdx];
+
+      APP_STATE.groups[origGroupId].operators.splice(opIdx, 1);
+
+      Object.keys(APP_STATE.monthlyAttendance).forEach(mKey => {
+        const mData = APP_STATE.monthlyAttendance[mKey];
+        if (mData[origGroupId]) {
+          const reindexed = {};
+          APP_STATE.groups[origGroupId].operators.forEach((_, idx) => {
+            const oldKey = idx >= opIdx ? idx + 1 : idx;
+            reindexed[idx] = mData[origGroupId][oldKey] || [];
+          });
+          mData[origGroupId] = reindexed;
+        }
+      });
+
+      document.getElementById(`g1Badge`).textContent = APP_STATE.groups[1].operators.length;
+      document.getElementById(`g2Badge`).textContent = APP_STATE.groups[2].operators.length;
+      document.getElementById(`g3Badge`).textContent = APP_STATE.groups[3].operators.length;
+
+      saveToStorage();
+      document.getElementById('editOperatorModal').classList.add('hidden');
+
+      updateKpiDashboard();
+      if (APP_STATE.currentTab !== 'kpi') {
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderGroupMatrix(gNum);
+      }
+
+      showToast("Operator Removed", `Removed ${opName} from roster.`, "warning");
+    }
+
+    
+    // --- BATCH MANAGE ROSTER FUNCTIONS ---
+    let currentManagingGroup = 1;
+
+    function openManageRosterModal(groupId) {
+      currentManagingGroup = groupId;
+      const group = APP_STATE.groups[groupId];
+      document.getElementById('manageRosterModalTitle').textContent = `Edit ${group.name} Roster`;
+      document.getElementById('manageRosterCount').textContent = `${group.operators.length} Operators`;
+
+      const listContainer = document.getElementById('manageRosterList');
+      listContainer.innerHTML = '';
+
+      group.operators.forEach((name, opIdx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center space-x-2 bg-slate-50 p-2 rounded-lg border border-slate-200';
+        row.innerHTML = `
+          <span class="w-6 text-center font-mono text-slate-400 font-bold text-xs">${opIdx + 1}</span>
+          <input type="text" data-idx="${opIdx}" class="roster-name-input flex-1 border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="${name}">
+          <button type="button" onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-indigo-600 hover:text-indigo-800 text-xs px-2 py-1 rounded hover:bg-indigo-50 font-semibold" title="Advanced options (transfer/delete)">
+            Options
+          </button>
+        `;
+        listContainer.appendChild(row);
+      });
+
+      document.getElementById('manageRosterModal').classList.remove('hidden');
+    }
+
+    function saveAllRosterChanges() {
+      const group = APP_STATE.groups[currentManagingGroup];
+      const inputs = document.querySelectorAll('.roster-name-input');
+      let changedCount = 0;
+
+      inputs.forEach(input => {
+        const idx = parseInt(input.getAttribute('data-idx'), 10);
+        const val = input.value.trim();
+        if (val && group.operators[idx] !== val) {
+          group.operators[idx] = val;
+          changedCount++;
+        }
+      });
+
+      saveToStorage();
+      document.getElementById('manageRosterModal').classList.add('hidden');
+
+      updateKpiDashboard();
+      if (APP_STATE.currentTab !== 'kpi') {
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderGroupMatrix(gNum);
+      }
+
+      showToast("Roster Saved", `Updated operator names in ${group.name}`, "success");
+    }
+
+    // --- SMART MESSAGE PARSER ---
+    function parseAbsenteeMessage(text) {
+      if (!text || !text.trim()) return [];
+      const cleaned = text.toLowerCase();
+      const detected = [];
+
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        group.operators.forEach((fullName, opIdx) => {
+          const parts = fullName.toLowerCase().split(/\s+/);
+          const firstName = parts[0];
+          const lastName = parts.length > 1 ? parts[parts.length - 1] : '';
+
+          let matched = false;
+          if (cleaned.includes(fullName.toLowerCase())) {
+            matched = true;
+          } else if (firstName.length >= 4 && cleaned.includes(firstName)) {
+            matched = true;
+          } else if (lastName.length >= 4 && cleaned.includes(lastName)) {
+            matched = true;
+          }
+
+          if (matched) {
+            detected.push({ groupId: gId, opIdx, name: fullName });
+          }
+        });
+      });
+
+      return detected;
+    }
+
+    // --- POPULATE 5:00 PM CHECKIN MODAL ---
+    function openCheckinModal() {
+      playChime();
+      document.getElementById('modalInputDate').value = APP_STATE.selectedDate;
+      document.getElementById('pastedMessageInput').value = '';
+      document.getElementById('detectedCountLabel').textContent = '0 names detected';
+
+      const targetDay = new Date(APP_STATE.selectedDate).getDate() - 1;
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+
+      // Populate Checklist for each group
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        const container = document.getElementById(`modalG${gId}List`);
+        container.innerHTML = '';
+        const gAttendance = mData[gId] || {};
+
+        group.operators.forEach((name, opIdx) => {
+          const currentStatus = gAttendance[opIdx] ? gAttendance[opIdx][targetDay] : 'P';
+          const isAbsent = currentStatus === 'A';
+
+          const label = document.createElement('label');
+          label.className = 'flex items-center space-x-2 text-xs p-1.5 rounded hover:bg-slate-100 cursor-pointer';
+          label.innerHTML = `
+            <input type="checkbox" data-group="${gId}" data-op="${opIdx}" class="absent-checkbox rounded text-rose-600 focus:ring-rose-500 w-4 h-4" ${isAbsent ? 'checked' : ''}>
+            <span class="text-slate-800 ${isAbsent ? 'font-bold text-rose-700' : ''}">${name}</span>
+          `;
+          container.appendChild(label);
+        });
+      });
+
+      refreshModalCounts();
+      document.getElementById('checkinModal').classList.remove('hidden');
+    }
+
+    function refreshModalCounts() {
+      let totalAbs = 0;
+      [1, 2, 3].forEach(gId => {
+        const count = document.querySelectorAll(`input.absent-checkbox[data-group="${gId}"]:checked`).length;
+        document.getElementById(`modalG${gId}Count`).textContent = `${count} absent`;
+        totalAbs += count;
+      });
+      document.getElementById('modalTotalAbsentSummary').textContent = `${totalAbs} operators`;
+    }
+
+    // --- APPLY CHECKIN MODAL TO MONTHLY SHEET ---
+    function applyCheckinAttendance() {
+      const selectedDateVal = document.getElementById('modalInputDate').value;
+      APP_STATE.selectedDate = selectedDateVal;
+      document.getElementById('kpiSelectedDate').value = selectedDateVal;
+
+      const dateObj = new Date(selectedDateVal);
+      const targetYear = dateObj.getFullYear();
+      const targetMonth = dateObj.getMonth();
+      const dayIdx = dateObj.getDate() - 1;
+
+      // Switch active month if date belongs to another month
+      if (targetYear !== APP_STATE.selectedYear || targetMonth !== APP_STATE.selectedMonth) {
+        APP_STATE.selectedYear = targetYear;
+        APP_STATE.selectedMonth = targetMonth;
+        APP_STATE.daysInMonth = calculateDaysInMonth(targetYear, targetMonth);
+        ensureMonthAttendance(targetYear, targetMonth);
+        populateMonthDropdowns();
+      }
+
+      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      let totalAbsentCount = 0;
+
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        const checkboxes = document.querySelectorAll(`input.absent-checkbox[data-group="${gId}"]`);
+
+        checkboxes.forEach(cb => {
+          const opIdx = parseInt(cb.getAttribute('data-op'), 10);
+          const isMarkedAbsent = cb.checked;
+
+          if (!mData[gId][opIdx]) mData[gId][opIdx] = [];
+          
+          if (isMarkedAbsent) {
+            mData[gId][opIdx][dayIdx] = 'A';
+            totalAbsentCount++;
+          } else {
+            const isSun = new Date(targetYear, targetMonth, dayIdx + 1).getDay() === 0;
+            mData[gId][opIdx][dayIdx] = isSun ? 'WO' : 'P';
+          }
+        });
+      });
+
+      saveToStorage();
+      document.getElementById('checkinModal').classList.add('hidden');
+
+      updateKpiDashboard();
+      if (APP_STATE.currentTab !== 'kpi') {
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderGroupMatrix(gNum);
+      }
+
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('lastCalculatedTime').textContent = `${MONTH_NAMES[APP_STATE.selectedMonth]} ${APP_STATE.selectedYear} (Updated ${nowStr})`;
+
+      showToast("Attendance & KPIs Updated", `Logged ${totalAbsentCount} absent operators for ${selectedDateVal}. Sheets recalculated!`, "success");
+    }
+
+    // --- BUILD 4-TAB EXCEL WORKBOOK FOR A GIVEN MONTH ---
+    function buildWorkbookForMonth(year, monthIndex) {
+      const wb = XLSX.utils.book_new();
+      const curMonthName = MONTH_NAMES[monthIndex];
+      const daysCount = calculateDaysInMonth(year, monthIndex);
+      const metrics = calculateMetrics(0, year, monthIndex);
+      const mData = ensureMonthAttendance(year, monthIndex);
+
+      // ==========================================
+      // TAB 1: KPI DASHBOARD SHEET
+      // ==========================================
+      const kpiRows = [
+        ["MONTHLY ATTENDANCE KPI DASHBOARD", `Period: ${curMonthName} ${year}`, `Exported: ${new Date().toLocaleString()}`],
+        [],
+        ["1. EXECUTIVE SUMMARY"],
+        ["Total Manpower Headcount", metrics.totalManpower],
+        ["Month-to-Date Average Absent %", `${metrics.mtdAvgPct}%`],
+        ["Assembly Line Attendance Stability", metrics.mtdAvgPct < 6.0 ? "OPTIMAL" : "NEEDS COUNSELING"],
+        [],
+        ["2. GROUP-WISE ABSENTEEISM BREAKDOWN"],
+        ["Group Name", "Total Operators", "Month Absent Rate %"],
+        ["Group-01 Assembly", metrics.groupBreakdown[1].total, `${metrics.groupBreakdown[1].absentPct.toFixed(1)}%`],
+        ["Group-02 Sub-Assembly", metrics.groupBreakdown[2].total, `${metrics.groupBreakdown[2].absentPct.toFixed(1)}%`],
+        ["Group-03 Testing & Fitment", metrics.groupBreakdown[3].total, `${metrics.groupBreakdown[3].absentPct.toFixed(1)}%`],
+        [],
+        ["3. HIGH ABSENTEEISM MANPOWER LEADERBOARD"],
+        ["Rank", "Operator Name", "Group", "Total Absent Days", "Working Days Considered", "Absenteeism %", "Category"]
+      ];
+
+      metrics.leaderboard.forEach((op, idx) => {
+        const cat = op.pct > 15 ? "CRITICAL REVIEW" : op.pct > 8 ? "ATTENTION" : "NORMAL";
+        kpiRows.push([idx + 1, op.name, op.group, op.absentDays, op.totalDays, `${op.pct}%`, cat]);
+      });
+
+      kpiRows.push([]);
+      kpiRows.push(["4. DAILY ABSENTEEISM TREND (DAY 1 TO END OF MONTH)"]);
+      const dayHeader = ["Metric"];
+      const dayPctValues = ["Daily % Absent"];
+      const dayPresentVals = ["Total Present"];
+      const dayAbsentVals = ["Total Absent"];
+
+      metrics.dailyTrend.forEach(t => {
+        dayHeader.push(`Day ${t.day}`);
+        dayPctValues.push(t.isWO ? "WO" : (t.pct !== null ? `${t.pct}%` : "-"));
+        dayPresentVals.push(t.present);
+        dayAbsentVals.push(t.absent);
+      });
+
+      kpiRows.push(dayHeader);
+      kpiRows.push(dayPresentVals);
+      kpiRows.push(dayAbsentVals);
+      kpiRows.push(dayPctValues);
+
+      const wsKpi = XLSX.utils.aoa_to_sheet(kpiRows);
+      XLSX.utils.book_append_sheet(wb, wsKpi, "KPI DASHBOARD");
+
+      // ==========================================
+      // TABS 2, 3, 4: GROUP ATTENDANCE SHEETS
+      // ==========================================
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        const gAttendance = mData[gId] || {};
+        const gRows = [];
+
+        gRows.push([`${group.name.toUpperCase()} MONTHLY ATTENDANCE SHEET - ${curMonthName.toUpperCase()} ${year}`]);
+        gRows.push([]);
+
+        // Header Row
+        const gHeader = ["Sr.No", "Operator Name"];
+        for (let d = 1; d <= daysCount; d++) {
+          gHeader.push(`D${d}`);
+        }
+        gHeader.push("Total Present (P)", "Total Absent (A)", "Absent %");
+        gRows.push(gHeader);
+
+        // Operator Rows
+        group.operators.forEach((name, opIdx) => {
+          let pCount = 0;
+          let aCount = 0;
+          const row = [opIdx + 1, name];
+
+          for (let d = 1; d <= daysCount; d++) {
+            const st = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : "-";
+            row.push(st || "-");
+            if (st === 'P') pCount++;
+            if (st === 'A') aCount++;
+          }
+
+          const workingDays = pCount + aCount;
+          const opPct = workingDays > 0 ? `${((aCount / workingDays) * 100).toFixed(1)}%` : "0.0%";
+
+          row.push(pCount, aCount, opPct);
+          gRows.push(row);
+        });
+
+        gRows.push([]);
+
+        // Bottom Summary Rows (as requested by user)
+        const totalOpsRow = ["-", "TOTAL OPERATORS"];
+        const dailyPresRow = ["-", "DAILY PRESENT"];
+        const dailyAbsRow = ["-", "DAILY ABSENT"];
+        const dailyPctRow = ["%", "DAILY % ABSENT"];
+
+        let mSumP = 0;
+        let mSumA = 0;
+
+        for (let d = 1; d <= daysCount; d++) {
+          let dP = 0;
+          let dA = 0;
+          let isWO = false;
+
+          group.operators.forEach((_, opIdx) => {
+            const st = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : null;
+            if (st === 'P') dP++;
+            if (st === 'A') dA++;
+            if (st === 'WO') isWO = true;
+          });
+
+          mSumP += dP;
+          mSumA += dA;
+
+          totalOpsRow.push(group.operators.length);
+          dailyPresRow.push(isWO ? "WO" : dP);
+          dailyAbsRow.push(isWO ? "WO" : dA);
+
+          const dWork = dP + dA;
+          if (dWork > 0) {
+            dailyPctRow.push(`${((dA / dWork) * 100).toFixed(1)}%`);
+          } else if (isWO) {
+            dailyPctRow.push("WO");
+          } else {
+            dailyPctRow.push("-");
+          }
+        }
+
+        const mTotalWork = mSumP + mSumA;
+        const mOverallPct = mTotalWork > 0 ? `${((mSumA / mTotalWork) * 100).toFixed(1)}%` : "0.0%";
+
+        totalOpsRow.push("-", "-", "-");
+        dailyPresRow.push(mSumP, "-", "-");
+        dailyAbsRow.push("-", mSumA, "-");
+        dailyPctRow.push(mSumP, mSumA, mOverallPct);
+
+        gRows.push(totalOpsRow);
+        gRows.push(dailyPresRow);
+        gRows.push(dailyAbsRow);
+        gRows.push(dailyPctRow);
+
+        const wsGroup = XLSX.utils.aoa_to_sheet(gRows);
+        const sheetTitle = gId === 1 ? "GROUP-01 ATTENDANCE" : gId === 2 ? "GROUP-02 ATTENDANCE" : "GROUP-03 ATTENDANCE";
+        XLSX.utils.book_append_sheet(wb, wsGroup, sheetTitle);
+      });
+
+      return wb;
+    }
+
+    // --- EXECUTE MONTH-WISE EXCEL EXPORT ---
+    function exportMonthwiseExcel() {
+      if (typeof XLSX === 'undefined') {
+        showToast("Export Failed", "Excel generator library not yet loaded. Please try again.", "error");
+        return;
+      }
+
+      const selectedKey = document.getElementById('exportMonthSelect').value;
+      const [year, month] = selectedKey.split('-').map(Number);
+      const monthIdx = month - 1;
+      const curMonthName = MONTH_NAMES[monthIdx];
+
+      const wb = buildWorkbookForMonth(year, monthIdx);
+      const fileName = `Monthly_Attendance_Sheet_${curMonthName}_${year}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      document.getElementById('exportModal').classList.add('hidden');
+      showToast("Excel Export Complete", `Downloaded ${fileName} with all 4 sheets for ${curMonthName} ${year}!`, "success");
+    }
+
+    // --- BULK EXPORT ALL STORED MONTHS ---
+    function exportAllMonthsConsolidated() {
+      if (typeof XLSX === 'undefined') {
+        showToast("Export Failed", "Excel generator library not yet loaded.", "error");
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const keys = Object.keys(APP_STATE.monthlyAttendance).sort();
+
+      // Master Summary Sheet
+      const masterRows = [
+        ["ANNUAL ATTENDANCE & KPI CONSOLIDATED REPORT", `Generated: ${new Date().toLocaleString()}`],
+        [],
+        ["Month", "Total Headcount", "MTD Absenteeism %", "Status"]
+      ];
+
+      keys.forEach(k => {
+        const [y, m] = k.split('-').map(Number);
+        const metrics = calculateMetrics(0, y, m - 1);
+        masterRows.push([`${MONTH_NAMES[m - 1]} ${y}`, metrics.totalManpower, `${metrics.mtdAvgPct}%`, metrics.mtdAvgPct < 6.0 ? "Target Met" : "Exceeded 5% Target"]);
+      });
+
+      const wsMaster = XLSX.utils.aoa_to_sheet(masterRows);
+      XLSX.utils.book_append_sheet(wb, wsMaster, "ANNUAL KPI SUMMARY");
+
+      // Append monthly summary sheets
+      keys.forEach(k => {
+        const [y, m] = k.split('-').map(Number);
+        const mName = MONTH_NAMES[m - 1].slice(0, 3);
+        const metrics = calculateMetrics(0, y, m - 1);
+        const rows = [
+          [`ATTENDANCE OVERVIEW - ${MONTH_NAMES[m - 1]} ${y}`],
+          [],
+          ["Rank", "Operator Name", "Group", "Absent Days", "Absent %"]
+        ];
+        metrics.leaderboard.forEach((op, idx) => {
+          rows.push([idx + 1, op.name, op.group, op.absentDays, `${op.pct}%`]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        XLSX.utils.book_append_sheet(wb, ws, `${mName}_${y}_SUMMARY`);
+      });
+
+      const fileName = `All_Months_Attendance_Consolidated_Archive_${APP_STATE.selectedYear}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      document.getElementById('exportModal').classList.add('hidden');
+      showToast("Archive Downloaded", `Consolidated multi-month archive exported: ${fileName}`, "success");
+    }
+
+    // --- INITIAL SETUP AND EVENT LISTENERS ---
+    document.addEventListener('DOMContentLoaded', () => {
+      const hasStored = loadFromStorage();
+      if (!hasStored) {
+        initializeMultiMonthData();
+      }
+
+      populateMonthDropdowns();
+
+      // 1. Tab switching
+      const tabKpi = document.getElementById('tabBtnKpi');
+      const tabG1 = document.getElementById('tabBtnG1');
+      const tabG2 = document.getElementById('tabBtnG2');
+      const tabG3 = document.getElementById('tabBtnG3');
+
+      const viewKpi = document.getElementById('viewKpi');
+      const viewMatrix = document.getElementById('viewGroupMatrix');
+
+      function setTab(tabName) {
+        APP_STATE.currentTab = tabName;
+        [tabKpi, tabG1, tabG2, tabG3].forEach(b => {
+          b.classList.remove('border-indigo-500', 'text-white');
+          b.classList.add('border-transparent', 'text-slate-400');
+        });
+
+        if (typeof updateMobNavState === 'function') updateMobNavState(tabName);
+
+        if (tabName === 'kpi') {
+          tabKpi.classList.add('border-indigo-500', 'text-white');
+          tabKpi.classList.remove('border-transparent', 'text-slate-400');
+          viewKpi.classList.remove('hidden');
+          viewMatrix.classList.add('hidden');
+          updateKpiDashboard();
+        } else {
+          const gId = tabName === 'group1' ? 1 : tabName === 'group2' ? 2 : 3;
+          const targetBtn = tabName === 'group1' ? tabG1 : tabName === 'group2' ? tabG2 : tabG3;
+          targetBtn.classList.add('border-indigo-500', 'text-white');
+          targetBtn.classList.remove('border-transparent', 'text-slate-400');
+
+          viewKpi.classList.add('hidden');
+          viewMatrix.classList.remove('hidden');
+
+          // Auto-default to mobile cards on small screens unless user picked matrix
+          if (window.innerWidth < 768 && currentMatrixViewMode === 'cards') {
+            const btnCards = document.getElementById('viewModeCardsBtn');
+            if (btnCards) btnCards.click();
+          }
+
+          renderGroupMatrix(gId);
+        }
+      }
+
+      tabKpi.addEventListener('click', () => setTab('kpi'));
+      tabG1.addEventListener('click', () => setTab('group1'));
+      tabG2.addEventListener('click', () => setTab('group2'));
+      tabG3.addEventListener('click', () => setTab('group3'));
+
+      document.getElementById('switchToKpiBtn').addEventListener('click', () => setTab('kpi'));
+
+      // 2. Active Month Selector Change
+      document.getElementById('activeMonthSelect').addEventListener('change', (e) => {
+        const [y, m] = e.target.value.split('-').map(Number);
+        switchActiveMonth(y, m - 1);
+      });
+
+      // 3. Live Clock updates
+      function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-GB');
+        document.getElementById('liveClock').textContent = timeStr;
+
+        if (now.getHours() === 17 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+          openCheckinModal();
+        }
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // 4. 5:00 PM Check-In Buttons
+      document.getElementById('openPromptBtn').addEventListener('click', openCheckinModal);
+      document.getElementById('bannerCheckinBtn').addEventListener('click', openCheckinModal);
+      document.getElementById('closeCheckinModalBtn').addEventListener('click', () => {
+        document.getElementById('checkinModal').classList.add('hidden');
+      });
+      document.getElementById('cancelCheckinBtn').addEventListener('click', () => {
+        document.getElementById('checkinModal').classList.add('hidden');
+      });
+      document.getElementById('confirmCheckinBtn').addEventListener('click', applyCheckinAttendance);
+
+      document.getElementById('dismissBannerBtn').addEventListener('click', () => {
+        document.getElementById('reminderBanner').classList.add('hidden');
+      });
+
+      // 5. Message Parser Button
+      document.getElementById('parseMessageBtn').addEventListener('click', () => {
+        const text = document.getElementById('pastedMessageInput').value;
+        const matches = parseAbsenteeMessage(text);
+        
+        document.querySelectorAll('input.absent-checkbox').forEach(cb => cb.checked = false);
+
+        matches.forEach(m => {
+          const cb = document.querySelector(`input.absent-checkbox[data-group="${m.groupId}"][data-op="${m.opIdx}"]`);
+          if (cb) cb.checked = true;
+        });
+
+        refreshModalCounts();
+        document.getElementById('detectedCountLabel').textContent = `${matches.length} matching operator(s) detected`;
+        showToast("Message Parsed", `Identified ${matches.length} absent operator(s) from message text.`, "success");
+      });
+
+      document.getElementById('sampleMsgBtn').addEventListener('click', () => {
+        document.getElementById('pastedMessageInput').value = "5PM Absent list: Suresh Patil from G1, Rajesh Verma and Tushal B from G2, Sunita Bai from G3.";
+        document.getElementById('parseMessageBtn').click();
+      });
+
+      document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList.contains('absent-checkbox')) {
+          refreshModalCounts();
+        }
+      });
+
+      // 6. Date Picker in KPI
+      document.getElementById('kpiSelectedDate').addEventListener('change', (e) => {
+        APP_STATE.selectedDate = e.target.value;
+        const dateObj = new Date(e.target.value);
+        if (dateObj.getFullYear() !== APP_STATE.selectedYear || dateObj.getMonth() !== APP_STATE.selectedMonth) {
+          switchActiveMonth(dateObj.getFullYear(), dateObj.getMonth());
+        } else {
+          saveToStorage();
+          updateKpiDashboard();
+          showToast("Date Changed", `KPI Dashboard updated for ${e.target.value}`, "success");
+        }
+      });
+
+      // 7. Mark All Present in Matrix
+      document.getElementById('markAllPresentBtn').addEventListener('click', () => {
+        if (APP_STATE.currentTab === 'kpi') return;
+        const gId = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        const dayIdx = new Date(APP_STATE.selectedDate).getDate() - 1;
+        const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+        const group = APP_STATE.groups[gId];
+
+        group.operators.forEach((_, opIdx) => {
+          if (!mData[gId][opIdx]) mData[gId][opIdx] = [];
+          mData[gId][opIdx][dayIdx] = 'P';
+        });
+
+        saveToStorage();
+        renderGroupMatrix(gId);
+        updateKpiDashboard();
+        showToast("Marked Present", `All ${group.operators.length} operators in ${group.name} set to Present for today.`, "success");
+      });
+
+      // 8. Add Operator Modal Handling
+      const addOpModal = document.getElementById('addOperatorModal');
+      document.getElementById('addOperatorBtn').addEventListener('click', () => {
+        const curG = APP_STATE.currentTab === 'group1' ? '1' : APP_STATE.currentTab === 'group2' ? '2' : '3';
+        document.getElementById('newOpGroup').value = curG;
+        document.getElementById('newOpName').value = '';
+        addOpModal.classList.remove('hidden');
+      });
+      document.getElementById('closeAddOpBtn').addEventListener('click', () => addOpModal.classList.add('hidden'));
+      document.getElementById('cancelAddOpBtn').addEventListener('click', () => addOpModal.classList.add('hidden'));
+
+      document.getElementById('saveNewOpBtn').addEventListener('click', () => {
+        const gId = parseInt(document.getElementById('newOpGroup').value, 10);
+        const name = document.getElementById('newOpName').value.trim();
+        if (!name) {
+          showToast("Name Required", "Please enter operator full name.", "warning");
+          return;
+        }
+
+        const group = APP_STATE.groups[gId];
+        group.operators.push(name);
+        const newIdx = group.operators.length - 1;
+
+        // Add to all stored months
+        Object.keys(APP_STATE.monthlyAttendance).forEach(mKey => {
+          const [y, m] = mKey.split('-').map(Number);
+          const days = calculateDaysInMonth(y, m - 1);
+          APP_STATE.monthlyAttendance[mKey][gId][newIdx] = [];
+          for (let d = 1; d <= days; d++) {
+            const isSun = new Date(y, m - 1, d).getDay() === 0;
+            APP_STATE.monthlyAttendance[mKey][gId][newIdx].push(isSun ? 'WO' : 'P');
+          }
+        });
+
+        document.getElementById(`g${gId}Badge`).textContent = group.operators.length;
+
+        saveToStorage();
+        addOpModal.classList.add('hidden');
+        renderGroupMatrix(gId);
+        updateKpiDashboard();
+        showToast("Operator Added", `${name} added to ${group.name}`, "success");
+      });
+
+      // 9. Force Recalculate Button
+      document.getElementById('recalculateKpisBtn').addEventListener('click', () => {
+        updateKpiDashboard();
+        showToast("Recalculated", "KPI Dashboard refreshed with latest attendance counts.", "success");
+      });
+
+      // 10. Reset Demo Data
+      document.getElementById('resetDemoBtn').addEventListener('click', () => {
+        try {
+          localStorage.removeItem('ATTENDANCE_APP_MULTI_MONTH');
+        } catch (e) {}
+        initializeMultiMonthData();
+        populateMonthDropdowns();
+        updateKpiDashboard();
+        if (APP_STATE.currentTab !== 'kpi') {
+          const gId = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+          renderGroupMatrix(gId);
+        }
+        showToast("Demo Reset", "Sample multi-month factory attendance data reloaded.", "success");
+      });
+
+      // 11. Month-wise Export Modal Triggers
+      const exportModal = document.getElementById('exportModal');
+      document.getElementById('exportExcelBtn').addEventListener('click', () => {
+        document.getElementById('exportMonthSelect').value = getActiveMonthKey();
+        exportModal.classList.remove('hidden');
+      });
+      document.getElementById('closeExportModalBtn').addEventListener('click', () => exportModal.classList.add('hidden'));
+      document.getElementById('cancelExportModalBtn').addEventListener('click', () => exportModal.classList.add('hidden'));
+
+      document.getElementById('confirmExportBtn').addEventListener('click', exportMonthwiseExcel);
+      document.getElementById('exportAllMonthsBtn').addEventListener('click', exportAllMonthsConsolidated);
+
+      
+      // 12. Edit Operator Modal Event Listeners
+      const editOpModal = document.getElementById('editOperatorModal');
+      document.getElementById('closeEditOpBtn').addEventListener('click', () => editOpModal.classList.add('hidden'));
+      document.getElementById('cancelEditOpBtn').addEventListener('click', () => editOpModal.classList.add('hidden'));
+      document.getElementById('saveEditOpBtn').addEventListener('click', handleSaveEditOperator);
+      document.getElementById('deleteOpBtn').addEventListener('click', handleDeleteOperator);
+      document.getElementById('editOpNameInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSaveEditOperator();
+        }
+      });
+
+      // 13. Batch Manage Roster Modal Event Listeners
+      const manageRosterModal = document.getElementById('manageRosterModal');
+      document.getElementById('manageRosterBtn').addEventListener('click', () => {
+        const curG = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        openManageRosterModal(curG);
+      });
+      document.getElementById('closeManageRosterBtn').addEventListener('click', () => manageRosterModal.classList.add('hidden'));
+      document.getElementById('cancelManageRosterBtn').addEventListener('click', () => manageRosterModal.classList.add('hidden'));
+      document.getElementById('saveManageRosterBtn').addEventListener('click', saveAllRosterChanges);
+      document.getElementById('manageRosterAddBtn').addEventListener('click', () => {
+        manageRosterModal.classList.add('hidden');
+        document.getElementById('newOpGroup').value = String(currentManagingGroup);
+        document.getElementById('newOpName').value = '';
+        document.getElementById('addOperatorModal').classList.remove('hidden');
+      });
+
+      
+      // Mobile View Switcher Listeners
+      const matrixTableContainer = document.querySelector('#attendanceTable').closest('.bg-white.rounded-xl.border');
+      const cardsContainer = document.getElementById('mobileRollCallContainer');
+      const btnMatrix = document.getElementById('viewModeMatrixBtn');
+      const btnCards = document.getElementById('viewModeCardsBtn');
+
+      if (btnMatrix && btnCards) {
+        btnMatrix.addEventListener('click', () => {
+          currentMatrixViewMode = 'matrix';
+          btnMatrix.className = 'bg-white text-indigo-700 font-bold px-3 py-1.5 rounded shadow-sm transition flex items-center gap-1';
+          btnCards.className = 'text-slate-600 hover:text-slate-900 font-medium px-3 py-1.5 rounded transition flex items-center gap-1';
+          if (matrixTableContainer) matrixTableContainer.classList.remove('hidden');
+          if (cardsContainer) cardsContainer.classList.add('hidden');
+        });
+
+        btnCards.addEventListener('click', () => {
+          currentMatrixViewMode = 'cards';
+          btnCards.className = 'bg-white text-indigo-700 font-bold px-3 py-1.5 rounded shadow-sm transition flex items-center gap-1';
+          btnMatrix.className = 'text-slate-600 hover:text-slate-900 font-medium px-3 py-1.5 rounded transition flex items-center gap-1';
+          if (matrixTableContainer) matrixTableContainer.classList.add('hidden');
+          if (cardsContainer) cardsContainer.classList.remove('hidden');
+          const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+          renderMobileRollCallCards(gNum);
+        });
+      }
+
+      // Jump to Today Button
+      const jumpTodayBtn = document.getElementById('jumpTodayBtn');
+      if (jumpTodayBtn) {
+        jumpTodayBtn.addEventListener('click', () => {
+          const todayDate = new Date().getDate();
+          const thToday = document.querySelector('#tableHeaderRow th:nth-child(' + (todayDate + 2) + ')');
+          if (thToday) {
+            thToday.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            showToast("Centered", `Scrolled to Day ${todayDate}`, "success");
+          }
+        });
+      }
+
+      // Roll-Call Prev / Next Day Buttons
+      const prevDayBtn = document.getElementById('prevDayBtn');
+      const nextDayBtn = document.getElementById('nextDayBtn');
+      if (prevDayBtn && nextDayBtn) {
+        prevDayBtn.addEventListener('click', () => {
+          if (rollCallDayIndex > 0) {
+            rollCallDayIndex--;
+            const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+            renderMobileRollCallCards(gNum);
+          }
+        });
+        nextDayBtn.addEventListener('click', () => {
+          if (rollCallDayIndex < APP_STATE.daysInMonth - 1) {
+            rollCallDayIndex++;
+            const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+            renderMobileRollCallCards(gNum);
+          }
+        });
+      }
+
+      // Mobile FAB 5:00 PM Button
+      const mobileFabBtn = document.getElementById('mobileFabBtn');
+      if (mobileFabBtn) {
+        mobileFabBtn.addEventListener('click', openCheckinModal);
+      }
+
+      
+      // Mobile Bottom Bar Navigation Listeners
+      const mobNavKpi = document.getElementById('mobNavKpi');
+      const mobNavG1 = document.getElementById('mobNavG1');
+      const mobNavG2 = document.getElementById('mobNavG2');
+      const mobNavG3 = document.getElementById('mobNavG3');
+      const mobNavCheckin = document.getElementById('mobNavCheckin');
+
+      function updateMobNavState(activeTab) {
+        if (!mobNavKpi) return;
+        [mobNavKpi, mobNavG1, mobNavG2, mobNavG3].forEach(btn => {
+          btn.className = 'flex flex-col items-center justify-center py-1 px-2 text-slate-400 font-medium transition flex-1';
+        });
+
+        if (activeTab === 'kpi' && mobNavKpi) {
+          mobNavKpi.className = 'flex flex-col items-center justify-center py-1 px-2 text-indigo-400 font-bold transition flex-1';
+        } else if (activeTab === 'group1' && mobNavG1) {
+          mobNavG1.className = 'flex flex-col items-center justify-center py-1 px-2 text-indigo-400 font-bold transition flex-1';
+        } else if (activeTab === 'group2' && mobNavG2) {
+          mobNavG2.className = 'flex flex-col items-center justify-center py-1 px-2 text-indigo-400 font-bold transition flex-1';
+        } else if (activeTab === 'group3' && mobNavG3) {
+          mobNavG3.className = 'flex flex-col items-center justify-center py-1 px-2 text-indigo-400 font-bold transition flex-1';
+        }
+      }
+
+      if (mobNavKpi) mobNavKpi.addEventListener('click', () => { setTab('kpi'); updateMobNavState('kpi'); });
+      if (mobNavG1) mobNavG1.addEventListener('click', () => { setTab('group1'); updateMobNavState('group1'); });
+      if (mobNavG2) mobNavG2.addEventListener('click', () => { setTab('group2'); updateMobNavState('group2'); });
+      if (mobNavG3) mobNavG3.addEventListener('click', () => { setTab('group3'); updateMobNavState('group3'); });
+      if (mobNavCheckin) mobNavCheckin.addEventListener('click', openCheckinModal);
+
+      // Search & Filters in Mobile Roll-Call
+      const searchInput = document.getElementById('rollCallSearchInput');
+      const clearSearchBtn = document.getElementById('clearRollCallSearchBtn');
+      if (searchInput && clearSearchBtn) {
+        searchInput.addEventListener('input', (e) => {
+          rollCallSearchQuery = e.target.value.trim().toLowerCase();
+          clearSearchBtn.classList.toggle('hidden', !rollCallSearchQuery);
+          const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+          renderMobileRollCallCards(gNum);
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+          searchInput.value = '';
+          rollCallSearchQuery = '';
+          clearSearchBtn.classList.add('hidden');
+          const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+          renderMobileRollCallCards(gNum);
+        });
+      }
+
+      const fAll = document.getElementById('filterAllBtn');
+      const fAbs = document.getElementById('filterAbsentBtn');
+      const fPres = document.getElementById('filterPresentBtn');
+
+      function setFilterChip(filterType) {
+        rollCallFilter = filterType;
+        [fAll, fAbs, fPres].forEach(b => {
+          if (b) b.className = 'px-3 py-1 rounded-full font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+        });
+
+        if (filterType === 'all' && fAll) {
+          fAll.className = 'px-3 py-1 rounded-full font-bold bg-indigo-600 text-white shadow-sm transition';
+        } else if (filterType === 'absent' && fAbs) {
+          fAbs.className = 'px-3 py-1 rounded-full font-bold bg-rose-600 text-white shadow-sm transition';
+        } else if (filterType === 'present' && fPres) {
+          fPres.className = 'px-3 py-1 rounded-full font-bold bg-emerald-600 text-white shadow-sm transition';
+        }
+
+        const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+        renderMobileRollCallCards(gNum);
+      }
+
+      if (fAll) fAll.addEventListener('click', () => setFilterChip('all'));
+      if (fAbs) fAbs.addEventListener('click', () => setFilterChip('absent'));
+      if (fPres) fPres.addEventListener('click', () => setFilterChip('present'));
+
+      // Initial Dashboard render
+      updateKpiDashboard();
+    });
+  </script>
+
+  <!-- MOBILE BOTTOM APP NAVIGATION (Fixed on small screens for native app experience) -->
+  <nav class="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl">
+    <button id="mobNavKpi" class="flex flex-col items-center justify-center py-1 px-2 text-indigo-400 font-bold transition flex-1">
+      <span class="text-lg">📊</span>
+      <span class="text-[10px] mt-0.5 font-semibold">KPIs</span>
+    </button>
+    <button id="mobNavG1" class="flex flex-col items-center justify-center py-1 px-2 text-slate-400 font-medium transition flex-1">
+      <span class="text-lg">👥</span>
+      <span class="text-[10px] mt-0.5">Group 1</span>
+    </button>
+    <button id="mobNavG2" class="flex flex-col items-center justify-center py-1 px-2 text-slate-400 font-medium transition flex-1">
+      <span class="text-lg">👥</span>
+      <span class="text-[10px] mt-0.5">Group 2</span>
+    </button>
+    <button id="mobNavG3" class="flex flex-col items-center justify-center py-1 px-2 text-slate-400 font-medium transition flex-1">
+      <span class="text-lg">👥</span>
+      <span class="text-[10px] mt-0.5">Group 3</span>
+    </button>
+    <button id="mobNavCheckin" class="flex flex-col items-center justify-center py-1 px-2 text-amber-400 font-bold transition flex-1">
+      <span class="text-lg animate-bounce">⏰</span>
+      <span class="text-[10px] mt-0.5 font-extrabold text-amber-300">5PM Check</span>
+    </button>
+  </nav>
+
+</body>
+</html>
