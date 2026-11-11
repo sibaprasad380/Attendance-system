@@ -187,6 +187,7 @@
                 </span>
                 <span class="text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">Live Sync</span>
               </span>
+              <span id="storageStatusBadge" class="hidden sm:inline text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40">Auto-Saved ✓</span>
             </h1>
           </div>
         </div>
@@ -873,6 +874,22 @@
           </ul>
         </div>
 
+                <!-- Database Backup & Restore Option (100% Data Safety) -->
+        <div class="p-3.5 rounded-xl bg-slate-100 border border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div>
+            <strong class="text-xs font-bold text-slate-800 block">💾 Backup / Restore Data</strong>
+            <span class="text-[11px] text-slate-500">Download a JSON backup of your attendance records or restore on another device</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="backupDataBtn" type="button" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition">
+              Download Backup (.json)
+            </button>
+            <label class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm transition cursor-pointer">
+              Restore File
+              <input type="file" id="restoreDataInput" accept=".json" class="hidden">
+            </label>
+          </div>
+        </div>
         <!-- Multi-Month Bulk Option -->
         <div class="card-3d card-3d-indigo p-3.5 rounded-2xl flex items-center justify-between">
           <div>
@@ -1173,19 +1190,8 @@
 
               if (isSunday) {
                 row.push('WO'); // Weekly off
-              } else if (isSample) {
-                // Only populate past sample days (e.g. days 1 to 9), leaving current/future days EMPTY until data received
-                if (d < 10) {
-                  let absentRate = 0.04;
-                  if (gId === 2) absentRate = 0.08;
-                  if (opIdx === 1 || opIdx === 3) absentRate = 0.20;
-                  const pseudoRand = ((opIdx * 19 + d * 31 + gId * 11 + monthIndex * 7) % 100) / 100;
-                  row.push(pseudoRand < absentRate ? 'A' : 'P');
-                } else {
-                  row.push(null); // Empty until 5:00 PM data received!
-                }
               } else {
-                row.push(null); // Empty by default until data is received!
+                row.push(null); // COMPLETELY BLANK!
               }
             }
             APP_STATE.monthlyAttendance[monthKey][gId][opIdx] = row;
@@ -1198,10 +1204,10 @@
     // --- INITIALIZE MULTI-MONTH SAMPLE DATA ---
     function initializeMultiMonthData() {
       APP_STATE.monthlyAttendance = {};
-      // Pre-populate September 2026, October 2026, and November 2026
-      ensureMonthAttendance(2026, 8, true);  // Sep 2026
-      ensureMonthAttendance(2026, 9, true);  // Oct 2026
-      ensureMonthAttendance(2026, 10, true); // Nov 2026
+      // Ensure months exist with 100% BLANK attendance records (only Sundays are WO)
+      ensureMonthAttendance(2026, 8, false);  // Sep 2026
+      ensureMonthAttendance(2026, 9, false);  // Oct 2026
+      ensureMonthAttendance(2026, 10, false); // Nov 2026
 
       APP_STATE.selectedYear = 2026;
       APP_STATE.selectedMonth = 10; // November
@@ -1211,16 +1217,24 @@
       saveToStorage();
     }
 
-    // --- LOCAL STORAGE HANDLING ---
+    // --- LOCAL STORAGE HANDLING (PERMANENT PERSISTENCE) ---
     function saveToStorage() {
       try {
-        localStorage.setItem('ATTENDANCE_APP_MULTI_MONTH', JSON.stringify({
+        const payload = {
           groups: APP_STATE.groups,
           monthlyAttendance: APP_STATE.monthlyAttendance,
           selectedYear: APP_STATE.selectedYear,
           selectedMonth: APP_STATE.selectedMonth,
-          selectedDate: APP_STATE.selectedDate
-        }));
+          selectedDate: APP_STATE.selectedDate,
+          currentTab: APP_STATE.currentTab
+        };
+        localStorage.setItem('ATTENDANCE_APP_MULTI_MONTH', JSON.stringify(payload));
+        // Visual indicator that data is safely preserved
+        const storageBadge = document.getElementById('storageStatusBadge');
+        if (storageBadge) {
+          storageBadge.textContent = 'Auto-Saved ✓';
+          storageBadge.className = 'text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40 shadow-sm';
+        }
       } catch (e) {
         console.warn("Storage quota exceeded or disabled", e);
       }
@@ -1231,12 +1245,13 @@
         const raw = localStorage.getItem('ATTENDANCE_APP_MULTI_MONTH');
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed && parsed.monthlyAttendance && Object.keys(parsed.monthlyAttendance).length > 0) {
+          if (parsed && parsed.monthlyAttendance && typeof parsed.monthlyAttendance === 'object') {
             APP_STATE.groups = parsed.groups || APP_STATE.groups;
             APP_STATE.monthlyAttendance = parsed.monthlyAttendance;
             if (typeof parsed.selectedYear === 'number') APP_STATE.selectedYear = parsed.selectedYear;
             if (typeof parsed.selectedMonth === 'number') APP_STATE.selectedMonth = parsed.selectedMonth;
             if (parsed.selectedDate) APP_STATE.selectedDate = parsed.selectedDate;
+            if (parsed.currentTab) APP_STATE.currentTab = parsed.currentTab;
             APP_STATE.daysInMonth = calculateDaysInMonth(APP_STATE.selectedYear, APP_STATE.selectedMonth);
             return true;
           }
@@ -1383,7 +1398,7 @@
         let gWeeklyOff = 0;
 
         group.operators.forEach((_, opIdx) => {
-          const status = gAttendance[opIdx] ? gAttendance[opIdx][targetDayIndex] : 'P';
+          const status = gAttendance[opIdx] ? gAttendance[opIdx][targetDayIndex] : null;
           if (status === 'P') gPresent++;
           else if (status === 'A') gAbsent++;
           else if (status === 'WO') gWeeklyOff++;
@@ -1621,27 +1636,10 @@
       document.getElementById('kpiTodayAbsentCount').textContent = `(${metrics.totalAbsentToday} absent / ${metrics.totalManpower})`;
       document.getElementById('kpiMtdAvgPct').textContent = `${metrics.mtdAvgPct}%`;
 
-      const isDataReceived = (metrics.totalPresentToday + metrics.totalAbsentToday) > 0;
-      if (!isDataReceived) {
-        document.getElementById('kpiTodayAbsentPct').textContent = `Pending`;
-        document.getElementById('kpiTodayAbsentCount').textContent = `(Awaiting 5:00 PM Data)`;
-        document.getElementById('kpiTodayPresentCount').textContent = `-`;
-        document.getElementById('kpiTodayPresentPct').textContent = `Pending`;
-        const trendBadge = document.getElementById('kpiTrendBadge');
-        if (trendBadge) {
-          trendBadge.className = 'px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] border border-slate-300';
-          trendBadge.textContent = 'Awaiting Data';
-        }
-        document.getElementById('kpiCheckinStatus').textContent = 'Pending 5PM Roll-Call';
-        document.getElementById('kpiCheckinStatus').className = 'font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200';
-      } else {
-        document.getElementById('kpiTodayPresentCount').textContent = metrics.totalPresentToday;
-        document.getElementById('kpiTotalManpower').textContent = `/ ${metrics.totalManpower} Operators`;
-        const presentRate = metrics.totalManpower > 0 ? (metrics.totalPresentToday / metrics.totalManpower * 100).toFixed(1) : 0;
-        document.getElementById('kpiTodayPresentPct').textContent = `${presentRate}%`;
-        document.getElementById('kpiCheckinStatus').textContent = 'Updated Today';
-        document.getElementById('kpiCheckinStatus').className = 'font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200';
-      }
+      document.getElementById('kpiTodayPresentCount').textContent = metrics.totalPresentToday;
+      document.getElementById('kpiTotalManpower').textContent = `/ ${metrics.totalManpower} Operators`;
+      const presentRate = metrics.totalManpower > 0 ? (metrics.totalPresentToday / metrics.totalManpower * 100).toFixed(1) : 0;
+      document.getElementById('kpiTodayPresentPct').textContent = `${presentRate}%`;
 
       // Critical Group
       let highestG = 1;
@@ -1768,8 +1766,8 @@
           if (status === 'P') pCount++;
           if (status === 'A') aCount++;
 
-          let cellClass = 'bg-white text-slate-400';
-          let label = '-';
+          let cellClass = 'bg-white/80 text-transparent border border-slate-200/70 hover:bg-slate-100 hover:border-slate-300';
+          let label = ''; // Completely BLANK!
 
           if (status === 'P') {
             cellClass = 'bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200';
@@ -1836,18 +1834,18 @@
         monthTotalA += dayA;
 
         footTotalRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-slate-200 text-slate-500">${opTotal}</td>`;
-        footPresentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-emerald-700 border-r border-slate-200">${isWO ? '-' : dayP}</td>`;
-        footAbsentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-rose-700 border-r border-slate-200">${isWO ? '-' : dayA}</td>`;
-
         const dayWorking = dayP + dayA;
+        footPresentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-emerald-700 border-r border-slate-200">${isWO ? '-' : (dayWorking > 0 ? dayP : '')}</td>`;
+        footAbsentRow.innerHTML += `<td class="p-1 text-center font-mono font-bold text-rose-700 border-r border-slate-200">${isWO ? '-' : (dayWorking > 0 ? dayA : '')}</td>`;
+
         if (dayWorking > 0) {
           const pct = ((dayA / dayWorking) * 100).toFixed(1);
-          const alertColor = Number(pct) > 10 ? 'text-rose-700 font-black underline' : Number(pct) > 5 ? 'text-amber-700 font-bold' : 'text-slate-800 font-semibold';
+          const alertColor = Number(pct) > 12 ? 'text-rose-700 font-black underline' : 'text-emerald-700 font-bold';
           footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-[11px] ${alertColor}">${pct}%</td>`;
         } else if (isWO) {
           footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-400 text-[10px]">WO</td>`;
         } else {
-          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-300 text-[10px]">-</td>`;
+          footPctRow.innerHTML += `<td class="p-1 text-center font-mono border-r border-rose-300 text-slate-300 text-[10px]"></td>`;
         }
       }
 
@@ -1891,7 +1889,7 @@
       listContainer.innerHTML = '';
 
       group.operators.forEach((name, opIdx) => {
-        const status = gAttendance[opIdx] ? gAttendance[opIdx][rollCallDayIndex] : 'P';
+        const status = gAttendance[opIdx] ? gAttendance[opIdx][rollCallDayIndex] : null;
         if (status === 'P') dayPresent++;
         if (status === 'A') dayAbsent++;
 
@@ -1990,9 +1988,9 @@
 
       const current = mData[groupId][opIdx][dayIdx];
       if (current === 'P') mData[groupId][opIdx][dayIdx] = 'A';
-      else if (current === 'A') mData[groupId][opIdx][dayIdx] = null; // Back to empty
+      else if (current === 'A') mData[groupId][opIdx][dayIdx] = null; // Toggle back to BLANK
       else if (current === 'WO') mData[groupId][opIdx][dayIdx] = 'P';
-      else mData[groupId][opIdx][dayIdx] = 'P'; // From empty -> Present
+      else mData[groupId][opIdx][dayIdx] = 'P'; // From Blank -> Present
 
       saveToStorage();
       renderGroupMatrix(groupId);
@@ -2139,7 +2137,7 @@
       const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
       const days = calculateDaysInMonth(APP_STATE.selectedYear, APP_STATE.selectedMonth);
 
-      // Reset all attendance marks to EMPTY (null) for active month, keeping only Sundays as 'WO'
+      // Reset all attendance marks to COMPLETELY BLANK (null), keeping only Sundays as 'WO'
       [1, 2, 3].forEach(gId => {
         const group = APP_STATE.groups[gId];
         group.operators.forEach((_, opIdx) => {
@@ -2147,7 +2145,7 @@
           for (let d = 1; d <= days; d++) {
             const dateObj = new Date(APP_STATE.selectedYear, APP_STATE.selectedMonth, d);
             const isSunday = dateObj.getDay() === 0;
-            mData[gId][opIdx].push(isSunday ? 'WO' : null); // Empty until data received
+            mData[gId][opIdx].push(isSunday ? 'WO' : null); // COMPLETELY BLANK!
           }
         });
       });
@@ -2269,7 +2267,7 @@
         const gAttendance = mData[gId] || {};
 
         group.operators.forEach((name, opIdx) => {
-          const currentStatus = gAttendance[opIdx] ? gAttendance[opIdx][targetDay] : 'P';
+          const currentStatus = gAttendance[opIdx] ? gAttendance[opIdx][targetDay] : null;
           const isAbsent = currentStatus === 'A';
 
           const label = document.createElement('label');
@@ -2334,7 +2332,7 @@
             totalAbsentCount++;
           } else {
             const isSun = new Date(targetYear, targetMonth, dayIdx + 1).getDay() === 0;
-            mData[gId][opIdx][dayIdx] = isSun ? 'WO' : 'P'; // Marked Present upon receiving data
+            mData[gId][opIdx][dayIdx] = isSun ? 'WO' : 'P';
           }
         });
       });
@@ -2436,8 +2434,8 @@
           const row = [opIdx + 1, name];
 
           for (let d = 1; d <= daysCount; d++) {
-            const st = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : "-";
-            row.push(st || "-");
+            const st = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : "";
+            row.push(st || ""); // Blank in Excel
             if (st === 'P') pCount++;
             if (st === 'A') aCount++;
           }
@@ -2587,7 +2585,23 @@
         initializeMultiMonthData();
       }
 
+      // Restore active date input
+      const dateInput = document.getElementById('kpiSelectedDate');
+      if (dateInput) dateInput.value = APP_STATE.selectedDate;
+
       populateMonthDropdowns();
+
+      // Restore badges and labels
+      const mName = MONTH_NAMES[APP_STATE.selectedMonth];
+      const curYear = APP_STATE.selectedYear;
+      document.getElementById('currentMonthBadge').textContent = `${mName} ${curYear}`;
+      document.getElementById('chartMonthLabel').textContent = `(${mName} ${curYear})`;
+      document.getElementById('matrixMonthBadge').textContent = `${mName.slice(0, 3)} ${curYear}`;
+      document.getElementById('lastCalculatedTime').textContent = `${mName} ${curYear}`;
+
+      document.getElementById('g1Badge').textContent = APP_STATE.groups[1].operators.length;
+      document.getElementById('g2Badge').textContent = APP_STATE.groups[2].operators.length;
+      document.getElementById('g3Badge').textContent = APP_STATE.groups[3].operators.length;
 
       // 1. Tab switching
       const tabKpi = document.getElementById('tabBtnKpi');
@@ -2600,6 +2614,7 @@
 
       function setTab(tabName) {
         APP_STATE.currentTab = tabName;
+        saveToStorage();
         const activeTabClasses = ['bg-gradient-to-r', 'from-indigo-600', 'via-indigo-500', 'to-indigo-600', 'text-white', 'shadow-[0_4px_0_#312e81,0_6px_14px_rgba(79,70,229,0.45)]', 'border-b-[3px]', 'border-b-indigo-900', 'font-extrabold'];
         const inactiveTabClasses = ['text-slate-300', 'hover:text-white', 'bg-slate-900/60', 'hover:bg-slate-800/90', 'border', 'border-slate-800/80', 'border-b-[2px]', 'border-b-slate-950', 'font-semibold'];
 
@@ -2986,6 +3001,46 @@
       if (fPres) fPres.addEventListener('click', () => setFilterChip('present'));
 
       
+      
+      // Backup and Restore Handlers
+      const backupBtn = document.getElementById('backupDataBtn');
+      if (backupBtn) {
+        backupBtn.addEventListener('click', () => {
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem('ATTENDANCE_APP_MULTI_MONTH'));
+          const downloadAnchor = document.createElement('a');
+          downloadAnchor.setAttribute("href", dataStr);
+          downloadAnchor.setAttribute("download", `Attendance_Backup_${APP_STATE.selectedYear}_${APP_STATE.selectedMonth + 1}.json`);
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          downloadAnchor.remove();
+          showToast("Backup Created", "Downloaded complete attendance database JSON file.", "success");
+        });
+      }
+
+      const restoreInput = document.getElementById('restoreDataInput');
+      if (restoreInput) {
+        restoreInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            try {
+              const parsed = JSON.parse(event.target.result);
+              if (parsed && parsed.monthlyAttendance) {
+                localStorage.setItem('ATTENDANCE_APP_MULTI_MONTH', JSON.stringify(parsed));
+                showToast("Database Restored", "Reloading restored attendance records...", "success");
+                setTimeout(() => window.location.reload(), 800);
+              } else {
+                showToast("Invalid File", "File does not contain valid attendance data.", "warning");
+              }
+            } catch (err) {
+              showToast("Restore Error", "Could not parse backup file.", "error");
+            }
+          };
+          reader.readAsText(file);
+        });
+      }
+
       // 14. Clear Attendance Details Listeners
       const clearModal = document.getElementById('clearDataModal');
       const clearBtn = document.getElementById('clearAttendanceDataBtn');
@@ -3005,8 +3060,12 @@
         confirmClearBtn.addEventListener('click', executeClearAttendanceData);
       }
 
-      // Initial Dashboard render
-      updateKpiDashboard();
+      // Initial render: restore saved tab or render dashboard
+      if (APP_STATE.currentTab && APP_STATE.currentTab !== 'kpi') {
+        setTab(APP_STATE.currentTab);
+      } else {
+        updateKpiDashboard();
+      }
     });
   </script>
 
