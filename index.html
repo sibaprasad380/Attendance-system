@@ -10,13 +10,46 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- SheetJS for Multi-Tab & Multi-Month Excel Export -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Firebase App & Firestore SDK (Real-Time Cloud Sync for Team of 10) -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    
+    /* Design System Tokens & Accessibility (WCAG 2.1 AA Compliance) */
+    :root {
+      --surface-bg: #f8fafc;
+      --surface-card: #ffffff;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --brand-primary: #4f46e5;
+      --brand-dark: #312e81;
+      --status-present: #059669;
+      --status-absent: #e11d48;
+      --status-warning: #d97706;
+      --focus-ring: #4f46e5;
     }
-    .font-mono-code {
-      font-family: 'JetBrains Mono', monospace;
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2.5px solid var(--focus-ring) !important;
+      outline-offset: 2px !important;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+    .font-mono, .font-mono-code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-variant-numeric: tabular-nums;
     }
     /* Custom scrollbars */
     ::-webkit-scrollbar {
@@ -80,11 +113,19 @@
       position: relative;
     }
     .card-3d:hover {
-      transform: translateY(-2px);
+      border-color: rgba(148, 163, 184, 0.7);
       box-shadow: 
-        0 14px 28px -6px rgba(15, 23, 42, 0.12),
-        0 8px 12px -4px rgba(15, 23, 42, 0.06),
+        0 10px 22px -4px rgba(15, 23, 42, 0.1),
+        0 4px 8px -2px rgba(15, 23, 42, 0.05),
         inset 0 1px 0 0 rgba(255, 255, 255, 1);
+    }
+    /* Disciplined Industrial Ledger Panel (Quieter container for charts, tables & notes) */
+    .panel-ledger {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-top: 3px solid #1e293b;
+      border-radius: 0.75rem;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
     }
     .card-3d-rose {
       background: linear-gradient(165deg, #ffffff 0%, #fff1f2 100%);
@@ -198,14 +239,24 @@
           <div>
             <h1 class="text-base sm:text-lg font-black leading-tight flex items-center gap-2 tracking-tight">
               <span>Attendance & KPI Monitoring System</span>
-              <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-950/90 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)] border-b-[1.5px] border-b-emerald-950 backdrop-blur-sm align-middle">
-                <span class="relative flex h-1.5 w-1.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400 shadow-[0_0_4px_#34d399]"></span>
+              <button id="syncSaveActionBtn" type="button" class="group inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 hover:from-slate-800 hover:to-slate-900 border border-emerald-500/40 border-b-[2.5px] border-b-emerald-950 shadow-[0_3px_10px_rgba(16,185,129,0.22),inset_0_1px_0_rgba(255,255,255,0.12)] active:translate-y-[1px] active:border-b-[1px] transition-all cursor-pointer align-middle select-none focus:outline-none focus:ring-1 focus:ring-emerald-400" title="Click to sync with Cloud or configure Cloud Database">
+                <span class="relative flex h-2 w-2">
+                  <span id="syncPingDot" class="hidden absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span id="syncCoreDot" class="relative inline-flex rounded-full h-2 w-2 bg-amber-400 shadow-[0_0_6px_#fbbf24]"></span>
                 </span>
-                <span class="text-[9px] uppercase font-black tracking-wider bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">Live Sync</span>
-              </span>
-              <span id="storageStatusBadge" class="hidden sm:inline text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40">Auto-Saved ✓</span>
+                <span class="text-[10px] font-bold tracking-tight bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text text-transparent">Live Sync</span>
+                <span class="h-2.5 w-[1px] bg-slate-700/90 hidden xs:inline-block"></span>
+                <span class="inline-flex items-center space-x-1 text-[9px] font-extrabold text-amber-300 group-hover:text-emerald-300 transition-colors">
+                  <svg id="syncSaveIcon" class="w-3 h-3 text-emerald-400 transition-transform duration-300 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span id="storageStatusBadge" class="tracking-tight">Cloud Setup ☁️</span>
+                </span>
+              </button>
+              <button id="openCloudSettingsBtn" type="button" class="inline-flex items-center space-x-1 px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-[10px] font-bold text-slate-200 cursor-pointer align-middle" title="Configure Firebase Cloud Sync & Team Member Name">
+                <span>☁️</span>
+                <span id="activeTeamMemberBadge" class="hidden sm:inline">Team Setup</span>
+              </button>
             </h1>
           </div>
         </div>
@@ -215,21 +266,21 @@
           <!-- Active Month 3D Capsule -->
           <div class="flex items-center space-x-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700/80 border-b-[3px] border-b-slate-950 shadow-[0_3px_6px_rgba(0,0,0,0.35)] text-xs">
             <span class="text-indigo-400 font-bold hidden md:inline">📅 Month:</span>
-            <select id="activeMonthSelect" class="bg-slate-950 border border-slate-700 text-white font-bold rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-400 focus:outline-none cursor-pointer shadow-inner">
+            <select id="activeMonthSelect" aria-label="Select active month" class="bg-slate-950 border border-slate-700 text-white font-bold rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-400 focus:outline-none cursor-pointer shadow-inner">
               <!-- Dynamically populated with all stored months -->
             </select>
           </div>
 
           <!-- Live Time 3D Capsule -->
           <div class="bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700/80 border-b-[3px] border-b-slate-950 shadow-[0_3px_6px_rgba(0,0,0,0.35)] hidden sm:flex items-center space-x-2 text-xs">
-            <div id="liveClockDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>
+            <div id="liveClockDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400  shadow-[0_0_8px_#34d399]"></div>
             <span id="liveClock" class="font-mono font-bold text-slate-100 tracking-wider">17:00:00</span>
             <span class="text-slate-400 text-[10px] font-semibold hidden lg:inline">IST</span>
           </div>
 
           <!-- 5:00 PM Check-In 3D Push Button -->
           <button id="openPromptBtn" class="bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-white font-black text-xs px-3 sm:px-4 py-2 rounded-xl border-b-[4px] border-b-amber-800 shadow-[0_4px_12px_rgba(245,158,11,0.45)] active:translate-y-[2px] active:border-b-[2px] transition-all flex items-center space-x-1.5 focus:outline-none focus:ring-2 focus:ring-amber-400">
-            <svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 " fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             <span class="font-black">5:00 PM Daily Check-In</span>
@@ -255,17 +306,17 @@
           <button id="tabBtnG1" class="tab-btn w-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/90 border border-slate-800/80 border-b-[2px] border-b-slate-950 hover:shadow-md flex items-center justify-center space-x-2">
             <span>👥</span>
             <span>2. Group-01 Attendance</span>
-            <span id="g1Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">15</span>
+            <span id="g1Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">44</span>
           </button>
           <button id="tabBtnG2" class="tab-btn w-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/90 border border-slate-800/80 border-b-[2px] border-b-slate-950 hover:shadow-md flex items-center justify-center space-x-2">
             <span>👥</span>
             <span>3. Group-02 Attendance</span>
-            <span id="g2Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">15</span>
+            <span id="g2Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">33</span>
           </button>
           <button id="tabBtnG3" class="tab-btn w-full text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2.5 rounded-xl transition-all duration-200 text-slate-300 hover:text-white bg-slate-900/60 hover:bg-slate-800/90 border border-slate-800/80 border-b-[2px] border-b-slate-950 hover:shadow-md flex items-center justify-center space-x-2">
             <span>👥</span>
             <span>4. Group-03 Attendance</span>
-            <span id="g3Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">15</span>
+            <span id="g3Badge" class="bg-slate-800 text-indigo-300 text-[10px] px-2 py-0.5 rounded-full border border-slate-700/80 font-bold ml-1">26</span>
           </button>
         </nav>
       </div>
@@ -277,7 +328,7 @@
     <div class="card-3d card-3d-amber p-4 flex flex-col sm:flex-row items-center justify-between text-xs sm:text-sm text-amber-950 gap-2">
       <div class="flex items-center space-x-2">
         <span class="flex h-2.5 w-2.5 relative">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span class="hidden absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
         </span>
         <span class="font-semibold text-amber-950">Daily 5:00 PM Shift Roll-Call:</span>
@@ -313,14 +364,14 @@
               <span>Attendance Key Performance Indicators (KPIs)</span>
               <span id="currentMonthBadge" class="text-xs font-bold px-3 py-0.5 rounded-full bg-indigo-100/80 text-indigo-800 border border-indigo-300/80 shadow-sm">November 2026</span>
             </h2>
-            <p class="text-xs text-slate-500 font-medium mt-0.5">Live consolidated performance across Group-1, Group-2, and Group-3</p>
+            <p class="text-xs text-slate-500 font-medium mt-0.5">Engine Assembly Line — Shift Manpower & Absenteeism Control</p>
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-2.5 text-xs">
           <div class="flex items-center space-x-2 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition">
             <span class="text-indigo-600 font-bold text-sm">📅</span>
             <span class="text-slate-500 font-semibold hidden xs:inline">Date:</span>
-            <input type="date" id="kpiSelectedDate" class="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer text-xs">
+            <input type="date" id="kpiSelectedDate" aria-label="Select attendance date" class="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer text-xs">
           </div>
           <button id="clearAttendanceDataBtn" class="btn-3d-rose text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 px-3.5 py-2 rounded-xl font-bold border border-rose-600 transition flex items-center space-x-1.5 shadow-sm text-xs cursor-pointer" title="Clear attendance details for active month">
             <span>🗑️</span>
@@ -361,7 +412,7 @@
           <div>
             <div class="flex items-center justify-between text-xs text-slate-500 font-semibold mb-2">
               <span class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 "></span>
                 <span>Present On Line</span>
               </span>
               <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300 shadow-sm">Active</span>
@@ -424,66 +475,67 @@
         </div>
       </div>
 
-      <!-- Group Breakdown Mini Cards -->
+      <!-- Group Breakdown Mini Cards (Interactive Insight-to-Action Cards) -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Group 1 Status Card -->
-        <div class="card-3d card-3d-blue p-4 rounded-2xl flex items-center justify-between">
+        <div id="cardJumpG1" role="button" tabindex="0" class="card-3d card-3d-blue p-4 rounded-2xl flex items-center justify-between cursor-pointer group" title="Click to open Group-01 Attendance Sheet">
           <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">G1</div>
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 border border-blue-200 flex items-center justify-center font-extrabold text-sm group-hover:bg-blue-600 group-hover:text-white transition-colors">G1</div>
             <div>
-              <h4 class="text-sm font-bold text-slate-900">Group-01 Assembly</h4>
-              <p class="text-xs text-slate-500" id="g1CardSub">15 Manpower • 1 Absent</p>
+              <h4 class="text-sm font-bold text-slate-900 group-hover:text-blue-700 transition-colors">Group-01 Assembly</h4>
+              <p class="text-xs text-slate-600 font-medium" id="g1CardSub">15 operators — 1 Absent</p>
             </div>
           </div>
           <div class="text-right">
-            <div id="g1CardPct" class="text-lg font-bold text-slate-800">6.7%</div>
-            <div class="text-[10px] text-slate-500">Daily Absent %</div>
+            <div id="g1CardPct" class="text-lg font-black text-slate-900">6.7%</div>
+            <div class="text-[10px] font-semibold text-blue-700">Open sheet</div>
           </div>
         </div>
 
         <!-- Group 2 Status Card -->
-        <div class="card-3d card-3d-amber p-4 rounded-2xl flex items-center justify-between">
+        <div id="cardJumpG2" role="button" tabindex="0" class="card-3d card-3d-amber p-4 rounded-2xl flex items-center justify-between cursor-pointer group" title="Click to open Group-02 Attendance Sheet">
           <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">G2</div>
+            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 flex items-center justify-center font-extrabold text-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">G2</div>
             <div>
-              <h4 class="text-sm font-bold text-slate-900">Group-02 Sub-Assembly</h4>
-              <p class="text-xs text-slate-500" id="g2CardSub">15 Manpower • 2 Absent</p>
+              <h4 class="text-sm font-bold text-slate-900 group-hover:text-amber-800 transition-colors">Group-02 Sub-Assembly</h4>
+              <p class="text-xs text-slate-600 font-medium" id="g2CardSub">15 operators — 2 Absent</p>
             </div>
           </div>
           <div class="text-right">
-            <div id="g2CardPct" class="text-lg font-bold text-amber-600">13.3%</div>
-            <div class="text-[10px] text-slate-500">Daily Absent %</div>
+            <div id="g2CardPct" class="text-lg font-black text-amber-700">13.3%</div>
+            <div class="text-[10px] font-semibold text-amber-800">Open sheet</div>
           </div>
         </div>
 
         <!-- Group 3 Status Card -->
-        <div class="card-3d card-3d-emerald p-4 rounded-2xl flex items-center justify-between">
+        <div id="cardJumpG3" role="button" tabindex="0" class="card-3d card-3d-emerald p-4 rounded-2xl flex items-center justify-between cursor-pointer group" title="Click to open Group-03 Attendance Sheet">
           <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">G3</div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center font-extrabold text-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">G3</div>
             <div>
-              <h4 class="text-sm font-bold text-slate-900">Group-03 Testing & Fitment</h4>
-              <p class="text-xs text-slate-500" id="g3CardSub">15 Manpower • 0 Absent</p>
+              <h4 class="text-sm font-bold text-slate-900 group-hover:text-emerald-800 transition-colors">Group-03 Testing & Fitment</h4>
+              <p class="text-xs text-slate-600 font-medium" id="g3CardSub">15 operators — 0 Absent</p>
             </div>
           </div>
           <div class="text-right">
-            <div id="g3CardPct" class="text-lg font-bold text-emerald-600">0.0%</div>
-            <div class="text-[10px] text-slate-500">Daily Absent %</div>
+            <div id="g3CardPct" class="text-lg font-black text-emerald-700">0.0%</div>
+            <div class="text-[10px] font-semibold text-emerald-800">Open sheet</div>
           </div>
         </div>
       </div>
 
+      
       <!-- Charts & High Absenteeism Leaderboard -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         <!-- Daily Absenteeism Trend Chart (2 columns) -->
-        <div class="lg:col-span-2 card-3d p-5 rounded-2xl flex flex-col">
+        <div class="lg:col-span-2 panel-ledger p-5 flex flex-col">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
                 <span>Daily Absenteeism % Trend</span>
                 <span id="chartMonthLabel" class="text-xs font-normal text-slate-500">(November 2026)</span>
               </h3>
-              <p class="text-xs text-slate-500">Daily absenteeism percentage plotted across day 1 to end of month with target benchmark</p>
+              <p class="text-xs text-slate-500">Daily rate vs. 12.0% plant threshold</p>
             </div>
             <div class="flex items-center space-x-2 text-xs">
               <span class="inline-flex items-center text-slate-600"><span class="w-3 h-0.5 bg-rose-500 mr-1.5 inline-block"></span> Daily %</span>
@@ -497,11 +549,11 @@
         </div>
 
         <!-- High Absenteeism Leaderboard (1 column) -->
-        <div class="card-3d p-5 rounded-2xl flex flex-col">
+        <div class="panel-ledger p-5 flex flex-col">
           <div class="flex items-center justify-between mb-3">
             <div>
               <h3 class="font-bold text-slate-900 text-sm sm:text-base">High Absenteeism Manpower</h3>
-              <p class="text-xs text-slate-500">Top operators requiring counseling or backup</p>
+              <p class="text-xs text-slate-500">Ranked by monthly absent days</p>
             </div>
             <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700">Ranked</span>
           </div>
@@ -521,22 +573,46 @@
 
       </div>
 
+      <!-- Relieving Operators in Current Month KPI Card -->
+      <div class="panel-ledger p-5 flex flex-col gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 border border-amber-200 flex items-center justify-center font-bold text-base flex-shrink-0">
+              📅
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <span>Operators Relieving in Current Month</span>
+                <span id="relievingCountBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">0 Relieving</span>
+              </h3>
+              <p class="text-xs text-slate-500">Based on Date of Relieving (DOR) for <span id="relievingMonthLabel" class="font-semibold text-slate-700">November 2026</span></p>
+            </div>
+          </div>
+          <span id="nextRelievingHint" class="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200"></span>
+        </div>
+        <div id="relievingOperatorsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto pr-1">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      
+
       <!-- Group Comparison & Operational Insights Row -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Group Comparison Bar Chart -->
-        <div class="card-3d p-5 rounded-2xl">
+        <div class="panel-ledger p-5">
           <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Group-wise Average Absenteeism Comparison</h3>
-          <p class="text-xs text-slate-500 mb-4">Comparing Group-01, Group-02, and Group-03 monthly average</p>
+          <p class="text-xs text-slate-500 mb-4">Daily group absenteeism comparison</p>
           <div class="relative h-60 w-full">
             <canvas id="groupComparisonChart"></canvas>
           </div>
         </div>
 
         <!-- Operational Insights & Action Plan -->
-        <div class="card-3d p-5 rounded-2xl flex flex-col justify-between">
+        <div class="panel-ledger p-5 flex flex-col justify-between">
           <div>
             <h3 class="font-bold text-slate-900 text-sm sm:text-base mb-1">Shift Supervisor Action Points</h3>
-            <p class="text-xs text-slate-500 mb-4">Automated recommendations based on current attendance patterns</p>
+            <p class="text-xs text-slate-500 mb-4">Line balancing and shift allocation notes</p>
             
             <div class="space-y-3" id="supervisorInsights">
               <div class="card-3d card-3d-amber p-3.5 flex items-start space-x-3 text-xs">
@@ -564,9 +640,12 @@
           </div>
 
           <div class="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Active Record: <span id="lastCalculatedTime" class="font-medium text-slate-700">November 2026</span></span>
-            <button id="recalculateKpisBtn" class="text-indigo-600 hover:text-indigo-800 font-semibold">
-              Force Recalculate ↻
+            <span>Active Record: <span id="lastCalculatedTime" class="font-bold text-slate-800">November 2026</span></span>
+            <button id="recalculateKpisBtn" type="button" class="btn-3d-neutral inline-flex items-center space-x-1.5 bg-gradient-to-b from-white to-slate-50 hover:from-indigo-50 hover:to-indigo-100/60 text-indigo-700 font-bold px-3 py-1.5 rounded-xl border border-slate-200 hover:border-indigo-300 transition shadow-sm cursor-pointer">
+              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Force Recalculate ↻</span>
             </button>
           </div>
         </div>
@@ -657,7 +736,7 @@
         <div class="card-3d flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl">
           <div class="relative flex-1">
             <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center text-slate-400 pointer-events-none">🔍</span>
-            <input type="text" id="rollCallSearchInput" class="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Search operator in this group...">
+            <input type="text" id="rollCallSearchInput" aria-label="Search operator in group" class="w-full pl-8 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Search operator in this group...">
             <button id="clearRollCallSearchBtn" class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 text-xs hidden">✕</button>
           </div>
           <div class="flex items-center space-x-1.5 overflow-x-auto text-[11px]">
@@ -689,7 +768,7 @@
       </div>
 
       <!-- Attendance Sheet Table Container -->
-      <div class="card-3d overflow-hidden rounded-2xl">
+      <div class="panel-ledger overflow-hidden">
         <div class="overflow-x-auto max-h-[550px] relative">
           <table class="w-full text-left text-xs border-collapse" id="attendanceTable">
             <thead class="bg-slate-900 text-white sticky top-0 z-30">
@@ -721,7 +800,7 @@
   <!-- ========================================== -->
   <!-- MODAL 1: 5:00 PM DAILY ABSENTEEISM INPUT -->
   <!-- ========================================== -->
-  <div id="checkinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+  <div id="checkinModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
     <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
       
       <!-- Modal Header -->
@@ -759,7 +838,7 @@
             <label for="pastedMessageInput" class="font-bold text-slate-800 flex items-center gap-1.5">
               <span>📩 Paste Incoming Message (WhatsApp / SMS / Teams):</span>
             </label>
-            <span class="text-xs text-slate-400">Smart Name Matching</span>
+            <span class="text-[11px] font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">Auto-match — verify checkboxes before saving</span>
           </div>
           <textarea id="pastedMessageInput" rows="3" class="w-full border border-slate-300 rounded-xl p-3 text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none placeholder-slate-400 font-mono" placeholder="Example: Absent today - Ramesh Sharma from G1, Sunil Reddy in Group 2, and Anil Kumar. Or just: Ramesh, Sunil, Anil"></textarea>
           
@@ -779,7 +858,7 @@
         <!-- Detected / Manual Selection Tabs by Group -->
         <div class="space-y-3 pt-2 border-t border-slate-100">
           <div class="flex items-center justify-between">
-            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wide">Review Absent Operators to Mark:</h4>
+            <h4 class="font-bold text-slate-800 text-xs tracking-tight">Select absent operators across groups:</h4>
             <span class="text-xs text-slate-500">Unchecked operators will remain Present (P)</span>
           </div>
 
@@ -844,7 +923,7 @@
   <!-- ========================================== -->
   <!-- MODAL 2: MONTH-WISE EXPORT EXCEL MODAL -->
   <!-- ========================================== -->
-  <div id="exportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+  <div id="exportModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
       
       <!-- Modal Header -->
@@ -936,7 +1015,7 @@
   <!-- ========================================== -->
   <!-- MODAL 3: ADD OPERATOR MODAL -->
   <!-- ========================================== -->
-  <div id="addOperatorModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+  <div id="addOperatorModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
     <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <h3 class="font-bold text-slate-900 text-base">Add New Operator to Roster</h3>
@@ -956,9 +1035,25 @@
           <label class="block font-medium text-slate-700 mb-1">Operator Full Name</label>
           <input type="text" id="newOpName" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. Ramesh Reddy">
         </div>
-        <div>
-          <label class="block font-medium text-slate-700 mb-1">Employee ID / Token (Optional)</label>
-          <input type="text" id="newOpToken" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. EMP-2501">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Token No (Optional)</label>
+            <input type="text" id="newOpToken" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. 1074414">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Category (Optional)</label>
+            <input type="text" id="newOpCategory" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. WILP">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Date of Relieving (DOR)</label>
+            <input type="date" id="newOpDor" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Station (Optional)</label>
+            <input type="text" id="newOpStation" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. ML-01">
+          </div>
         </div>
       </div>
 
@@ -975,7 +1070,7 @@
   <!-- ========================================== -->
   <!-- MODAL 4: EDIT OPERATOR MODAL -->
   <!-- ========================================== -->
-  <div id="editOperatorModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+  <div id="editOperatorModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
     <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 p-6 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center space-x-2">
@@ -993,6 +1088,26 @@
           <label class="block font-medium text-slate-700 mb-1">Operator Full Name</label>
           <input type="text" id="editOpNameInput" class="w-full border border-slate-300 rounded-lg p-2.5 font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Enter updated operator name">
         </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Token No</label>
+            <input type="text" id="editOpTokenInput" class="w-full border border-slate-300 rounded-lg p-2 font-mono text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. 1074414">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Category</label>
+            <input type="text" id="editOpCategoryInput" class="w-full border border-slate-300 rounded-lg p-2 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. WILP / PMIS">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Date of Relieving (DOR)</label>
+            <input type="date" id="editOpDorInput" class="w-full border border-slate-300 rounded-lg p-2 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-700 mb-1">Station</label>
+            <input type="text" id="editOpStationInput" class="w-full border border-slate-300 rounded-lg p-2 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. ML-01 / TESTING">
+          </div>
+        </div>
         <div>
           <label class="block font-medium text-slate-700 mb-1">Assigned Group</label>
           <select id="editOpGroupSelect" class="w-full border border-slate-300 rounded-lg p-2 font-medium cursor-pointer">
@@ -1000,7 +1115,7 @@
             <option value="2">Group-02</option>
             <option value="3">Group-03</option>
           </select>
-          <p class="text-[11px] text-slate-500 mt-1">You can edit the name or transfer the operator to another group.</p>
+          <p class="text-[11px] text-slate-500 mt-1">You can edit details or transfer the operator to another group.</p>
         </div>
       </div>
 
@@ -1022,7 +1137,7 @@
   <!-- ========================================== -->
   <!-- MODAL 5: BATCH MANAGE ROSTER MODAL -->
   <!-- ========================================== -->
-  <div id="manageRosterModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+  <div id="manageRosterModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]">
       
       <!-- Modal Header -->
@@ -1069,7 +1184,7 @@
   
   <!-- MOBILE FLOATING ACTION BUTTON (5:00 PM Check-In) -->
   <button id="mobileFabBtn" class="sm:hidden fixed bottom-6 right-5 z-40 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white pl-4 pr-5 py-3.5 rounded-full shadow-2xl flex items-center space-x-2 font-bold text-xs ring-4 ring-white/60 active:scale-95 transition-all">
-    <span class="text-base animate-bounce">⏰</span>
+    <span class="text-base ">⏰</span>
     <span>5:00 PM Check-In</span>
   </button>
 
@@ -1077,7 +1192,7 @@
   <!-- ========================================== -->
   <!-- MODAL 6: CLEAR ATTENDANCE DETAILS MODAL -->
   <!-- ========================================== -->
-  <div id="clearDataModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+  <div id="clearDataModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col p-6 space-y-4">
       
       <!-- Warning Header -->
@@ -1123,6 +1238,74 @@
     </div>
   </div>
 
+  
+  <!-- ========================================== -->
+  <!-- MODAL 7: CLOUD SYNC & TEAM SETUP (FIREBASE) -->
+  <!-- ========================================== -->
+  <div id="cloudSetupModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-md">
+            ☁️
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Team Cloud Sync (Firebase Firestore)</h3>
+            <p class="text-xs text-slate-300">Real-time shared database for your 10-member team</p>
+          </div>
+        </div>
+        <button id="closeCloudModalBtn" class="text-slate-400 hover:text-white text-lg p-1">✕</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm">
+        <div id="cloudConnStatusBox" class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between">
+          <span id="cloudConnStatusText" class="font-semibold">Not connected to Cloud yet — using local browser storage.</span>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-800 mb-1">Your Name (Team Member)</label>
+          <input type="text" id="teamMemberNameInput" class="w-full border border-slate-300 rounded-lg p-2.5 text-slate-800 font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="e.g. Rajesh / Shift Lead 1">
+          <p class="text-[11px] text-slate-500 mt-1">Shown on live updates so all 10 team members know who updated the sheet.</p>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block font-bold text-slate-800">Paste Firebase Config (JSON or JS snippet)</label>
+          <textarea id="firebaseConfigInput" rows="6" class="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-[11px] text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50" placeholder='Paste from Firebase Console -> Project Settings -> Web App:
+{
+  "apiKey": "AIzaSy...",
+  "authDomain": "your-app.firebaseapp.com",
+  "projectId": "your-app-id",
+  "storageBucket": "...",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1">
+          <strong class="text-slate-800 block">Quick 2-Minute Setup (Free Tier):</strong>
+          <p>1. Go to <strong>console.firebase.google.com</strong> &rarr; Create Project &rarr; Build &rarr; <strong>Firestore Database</strong> (Start in test mode).</p>
+          <p>2. Project Settings &rarr; Add Web App (&lt;/&gt;) &rarr; Copy <code>firebaseConfig</code> and paste above.</p>
+          <p>3. Click <strong>Save & Connect Cloud</strong>. Share your GitHub link + config (or paste it into <code>DEFAULT_FIREBASE_CONFIG</code> in <code>index.html</code> once so all 10 team members connect automatically!).</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between">
+        <button id="disconnectCloudBtn" type="button" class="text-xs font-semibold text-rose-600 hover:text-rose-800">Disconnect</button>
+        <div class="flex items-center space-x-2">
+          <button id="cancelCloudModalBtn" type="button" class="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-medium">Cancel</button>
+          <button id="saveCloudConfigBtn" type="button" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition">
+            Save & Connect Cloud
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
@@ -1144,40 +1327,263 @@
       return new Date(year, monthIndex + 1, 0).getDate();
     }
 
+    
+    // ========================================================
+    // CLOUD SYNC ENGINE (FIREBASE FIRESTORE - TEAM OF 10)
+    // ========================================================
+    // Optional: Paste your Firebase config object here once and commit to GitHub
+    // so all 10 team members connect automatically with zero setup!
+    const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAutrRtY-W-4O6WWSHs0rHUI75Y-dhgx2g",
+  authDomain: "engine-attendance-kpi.firebaseapp.com",
+  projectId: "engine-attendance-kpi",
+  storageBucket: "engine-attendance-kpi.firebasestorage.app",
+  messagingSenderId: "52185448258",
+  appId: "1:52185448258:web:ff9503be56ad3c507d92db"
+};
+    /* Example:
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456:web:abcdef"
+    };
+    */
+
+    let db = null;
+    let isCloudConnected = false;
+    let cloudMonthUnsub = null;
+    let cloudRosterUnsub = null;
+    let suppressNextCloudEcho = false;
+
+    function getTeamMemberName() {
+      return localStorage.getItem('ATTENDANCE_TEAM_MEMBER_NAME') || 'Team Member';
+    }
+
+    function getStoredFirebaseConfig() {
+      if (DEFAULT_FIREBASE_CONFIG && DEFAULT_FIREBASE_CONFIG.projectId) {
+        return DEFAULT_FIREBASE_CONFIG;
+      }
+      try {
+        const raw = localStorage.getItem('ATTENDANCE_FIREBASE_CONFIG');
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return null;
+    }
+
+    function parseFirebaseConfigInput(rawText) {
+      if (!rawText || !rawText.trim()) return null;
+      let txt = rawText.trim();
+      // Strip "const firebaseConfig = " and trailing ";" if user pasted JS snippet
+      txt = txt.replace(/^.*?(?=\{)/s, '').replace(/;+\s*$/, '');
+      // Quote unquoted keys: apiKey: -> "apiKey":
+      txt = txt.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+      // Replace single quotes with double quotes
+      txt = txt.replace(/'/g, '"');
+      return JSON.parse(txt);
+    }
+
+    function updateCloudStatusUI(connected, statusLabel) {
+      const coreDot = document.getElementById('syncCoreDot');
+      const badge = document.getElementById('storageStatusBadge');
+      const icon = document.getElementById('syncSaveIcon');
+      const connText = document.getElementById('cloudConnStatusText');
+      const connBox = document.getElementById('cloudConnStatusBox');
+      const memberBadge = document.getElementById('activeTeamMemberBadge');
+
+      if (memberBadge) {
+        memberBadge.textContent = getTeamMemberName();
+      }
+
+      if (connected) {
+        if (coreDot) coreDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-[0_0_6px_#34d399]';
+        if (badge) {
+          badge.textContent = statusLabel || 'Cloud Synced ✓';
+          badge.className = 'tracking-tight text-emerald-400';
+        }
+        if (icon) {
+          icon.classList.remove('animate-spin', 'text-amber-300');
+          icon.classList.add('text-emerald-400');
+        }
+        if (connText) connText.textContent = `Connected to Cloud (${APP_STATE.cloudProjectId || 'Firestore'}) — Syncing live for all 10 team members.`;
+        if (connBox) connBox.className = 'p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between';
+      } else {
+        if (coreDot) coreDot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-400 shadow-[0_0_6px_#fbbf24]';
+        if (badge) {
+          badge.textContent = statusLabel || 'Cloud Setup ☁️';
+          badge.className = 'tracking-tight text-amber-300';
+        }
+        if (connText) connText.textContent = 'Not connected to Cloud yet — tap "Save & Connect Cloud" below.';
+        if (connBox) connBox.className = 'p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between';
+      }
+    }
+
+    function initCloudSync() {
+      const cfg = getStoredFirebaseConfig();
+      if (!cfg || !cfg.projectId || typeof firebase === 'undefined') {
+        isCloudConnected = false;
+        updateCloudStatusUI(false);
+        return false;
+      }
+
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(cfg);
+        }
+        db = firebase.firestore();
+        isCloudConnected = true;
+        APP_STATE.cloudProjectId = cfg.projectId;
+        updateCloudStatusUI(true, 'Connecting...');
+
+        subscribeToCloudRoster();
+        subscribeToCloudMonth(getActiveMonthKey());
+        return true;
+      } catch (err) {
+        console.warn("Firebase init error:", err);
+        isCloudConnected = false;
+        updateCloudStatusUI(false, 'Cloud Error');
+        return false;
+      }
+    }
+
+    function subscribeToCloudRoster() {
+      if (!db) return;
+      if (cloudRosterUnsub) cloudRosterUnsub();
+
+      cloudRosterUnsub = db.collection('attendance_meta').doc('roster').onSnapshot(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data && data.groups && data.rosterVersion === APP_STATE.rosterVersion) {
+            APP_STATE.groups = data.groups;
+            const g1B = document.getElementById('g1Badge');
+            const g2B = document.getElementById('g2Badge');
+            const g3B = document.getElementById('g3Badge');
+            if (g1B) g1B.textContent = APP_STATE.groups[1].operators.length;
+            if (g2B) g2B.textContent = APP_STATE.groups[2].operators.length;
+            if (g3B) g3B.textContent = APP_STATE.groups[3].operators.length;
+
+            if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
+            else {
+              const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+              renderGroupMatrix(gNum);
+            }
+          }
+        } else {
+          // Seed initial 103-operator roster into Cloud
+          pushRosterToCloud();
+        }
+      }, err => {
+        console.warn("Roster snapshot error:", err);
+      });
+    }
+
+    function subscribeToCloudMonth(monthKey) {
+      if (!db) return;
+      if (cloudMonthUnsub) cloudMonthUnsub();
+
+      cloudMonthUnsub = db.collection('attendance_months').doc(monthKey).onSnapshot(doc => {
+        if (doc.exists) {
+          const cloudData = doc.data();
+          if (cloudData && cloudData.attendance) {
+            APP_STATE.monthlyAttendance[monthKey] = cloudData.attendance;
+            localStorage.setItem('ATTENDANCE_APP_MULTI_MONTH', JSON.stringify({
+              rosterVersion: APP_STATE.rosterVersion,
+              groups: APP_STATE.groups,
+              monthlyAttendance: APP_STATE.monthlyAttendance,
+              selectedYear: APP_STATE.selectedYear,
+              selectedMonth: APP_STATE.selectedMonth,
+              selectedDate: APP_STATE.selectedDate,
+              currentTab: APP_STATE.currentTab
+            }));
+
+            const who = cloudData.updatedBy ? ` (${cloudData.updatedBy})` : '';
+            updateCloudStatusUI(true, `Cloud Synced${who}`);
+
+            if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
+            else {
+              const gNum = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+              renderGroupMatrix(gNum);
+            }
+          }
+        } else {
+          // Seed current blank month structure into Cloud
+          const localMonth = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+          pushMonthToCloud(monthKey, localMonth);
+        }
+      }, err => {
+        console.warn("Month snapshot error:", err);
+        updateCloudStatusUI(false, 'Sync Error');
+      });
+    }
+
+    function pushRosterToCloud() {
+      if (!db || !isCloudConnected) return;
+      db.collection('attendance_meta').doc('roster').set({
+        rosterVersion: APP_STATE.rosterVersion,
+        groups: APP_STATE.groups,
+        updatedBy: getTeamMemberName(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).catch(e => console.warn("Roster cloud save failed", e));
+    }
+
+    function pushMonthToCloud(monthKey, monthObj) {
+      if (!db || !isCloudConnected) return;
+      updateCloudStatusUI(true, 'Cloud Saving...');
+      db.collection('attendance_months').doc(monthKey).set({
+        attendance: monthObj,
+        updatedBy: getTeamMemberName(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true }).then(() => {
+        updateCloudStatusUI(true, 'Cloud Synced ✓');
+      }).catch(e => {
+        console.warn("Month cloud save failed", e);
+        updateCloudStatusUI(false, 'Save Failed');
+      });
+    }
+
+    function pushSingleOperatorDayToCloud(monthKey, groupId, opIdx, rowArray) {
+      if (!db || !isCloudConnected) return;
+      updateCloudStatusUI(true, 'Cloud Saving...');
+      const docRef = db.collection('attendance_months').doc(monthKey);
+      const updateObj = {};
+      updateObj[`attendance.${groupId}.${opIdx}`] = rowArray;
+      updateObj['updatedBy'] = getTeamMemberName();
+      updateObj['updatedAt'] = new Date().toISOString();
+
+      docRef.update(updateObj).then(() => {
+        updateCloudStatusUI(true, 'Cloud Synced ✓');
+      }).catch(() => {
+        // Fallback if doc doesn't exist yet
+        const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+        pushMonthToCloud(monthKey, mData);
+      });
+    }
+
     // --- MULTI-MONTH STATE MANAGEMENT ---
     const APP_STATE = {
       currentTab: 'kpi', // 'kpi', 'group1', 'group2', 'group3'
       selectedYear: 2026,
       selectedMonth: 10, // 0-indexed: 10 = November
-      selectedDate: '2026-11-10',
+      selectedDate: '2026-11-15',
       daysInMonth: 30,
+      rosterVersion: "2026-11-15-v2",
       groups: {
         1: {
           name: "Group-01",
-          operators: [
-            "Ramesh Sharma", "Suresh Patil", "Anil Peter", "Sanjay Palande", 
-            "Ravinder Singh", "Javeed Mohammed", "Venkatesh Rao", "Pawan Zanvar",
-            "Bhupathi Rao", "Mahesh Babu", "K. Narsimha", "Ajit Khot", 
-            "Balachandra Prasad", "B. Vinay Kumar", "Dada Dandge"
-          ]
+          operators: ["M PHILOMAN", "B.SIDDAPPA", "SUMEET", "N.RAJU", "RAMAVATH JAGADEESH", "E.ASIF", "NAIKINI ARUN KUMAR", "YENIKEPALLY SACHIN KUMAR", "K.GOPALAKRISHNA", "BOINI SRIKANTH", "KRISHNA", "PAIDIGUMMALA VIJAYKUMAR", "Mohammed Khan", "KOPPULA SHIVAKUMAR", "RAHUL", "SYED HAJI", "GANESH", "DANDU DHONI", "Pramod..", "BEGARI NAGARAJ", "PALUVATLA ACHUTH REDDY", "K SRIDHAR", "SANDEEP", "GOLLA SAI KUMAR", "MD MUSTAFA", "SYED ALEEM ALI", "VEERESH", "MAHMAD MASHAK", "GOLLA ARUN KUMAR", "NAGESH KALAPPA", "B ANTHONY", "BEGARI VINAY", "MD.AFROZ", "P.SURESH", "ERPULA IMMANUEL", "GADDAM PRASHANTH", "KONDAGONI MALLESHAM", "Mohd Zaheer", "G VISHNU", "SANGAPUR RAJU REDDY", "K.NAGESH", "GHANAPURAM MAHESH KUMAR", "AMEERKHAN", "P SHRIKANTH"],
+          details: [{"token": "1074414", "category": "LEARN & EARN", "dor": "2029-04-13", "station": "CRANKCASE M/C"}, {"token": "24242736", "category": "Team Member", "dor": "2052-06-19", "station": "LINER CHECKING"}, {"token": "24246666", "category": "", "dor": "2027-04-26", "station": "CRANKCASE M/C"}, {"token": "24241308", "category": "TEAM MEMBER", "dor": "2047-10-17", "station": "GALLERY"}, {"token": "1072369", "category": "LEARN & EARN", "dor": "2029-04-01", "station": "GALLERY"}, {"token": "24241898", "category": "TEAM MEMBER", "dor": "2048-08-06", "station": "MBCAP"}, {"token": "1086066", "category": "LEARN & EARN", "dor": "2027-06-11", "station": "MBCAP"}, {"token": "24246273", "category": "ITI APPRENTICES", "dor": "2027-02-25", "station": "MBCAP"}, {"token": "1042211", "category": "LEARN & EARN", "dor": "2027-05-09", "station": "MBCAP"}, {"token": "1042262", "category": "WILP", "dor": "2028-01-21", "station": "PISTON DROPPING"}, {"token": "1091765", "category": "LEARN & EARN", "dor": "2029-07-13", "station": "PISTON DROPPING"}, {"token": "1050705", "category": "WILP", "dor": "2028-11-16", "station": "PISTON DROPPING"}, {"token": "1075909", "category": "LEARN & EARN", "dor": "2029-04-19", "station": "FRONT PLATE"}, {"token": "24246900", "category": "ITI APPRENTICES", "dor": "2027-10-14", "station": "IDLER GEAR"}, {"token": "24246519", "category": "PMIS", "dor": "2027-03-25", "station": "FRONT PLATE"}, {"token": "1044559", "category": "WILP", "dor": "2028-05-28", "station": "STARTER MOTOR"}, {"token": "24245736", "category": "WILP", "dor": "", "station": "BRACKET ASSY"}, {"token": "1074407", "category": "WILP", "dor": "2029-04-13", "station": "NUMBER PUNCHING"}, {"token": "1052821", "category": "WILP", "dor": "2028-12-07", "station": "ML-01"}, {"token": "1049536", "category": "Learn & Earn", "dor": "2028-11-09", "station": "ML-01"}, {"token": "1044334", "category": "WILP", "dor": "2028-07-15", "station": "ML-04"}, {"token": "24246932", "category": "PMIS", "dor": "2027-07-14", "station": "ML-04"}, {"token": "1093497", "category": "", "dor": "2027-04-26", "station": "ML-04"}, {"token": "1076316", "category": "ITI APPRENTICES", "dor": "2029-04-22", "station": "ML-05"}, {"token": "24246369", "category": "ITI Apprentices", "dor": "2027-04-08", "station": "ML-05"}, {"token": "1076332", "category": "ITI APPRENTICES", "dor": "2029-04-22", "station": "ML-06"}, {"token": "24246375", "category": "ITI APPRENTICES", "dor": "2027-04-08", "station": "ML-07"}, {"token": "24246998", "category": "ITI APPRENTICES", "dor": "2027-10-25", "station": ""}, {"token": "24246141", "category": "ITI Apprentices", "dor": "2027-01-18", "station": "ML-07"}, {"token": "1042289", "category": "Learn & Earn", "dor": "2027-06-29", "station": "ML-09"}, {"token": "24246288", "category": "ITI Apprentices", "dor": "2027-02-25", "station": "ML-09"}, {"token": "1050528", "category": "Learn & Earn", "dor": "2028-11-16", "station": "ML-09"}, {"token": "24241722", "category": "Team Member", "dor": "2051-03-26", "station": "PISTON SA"}, {"token": "24241543", "category": "Team Member", "dor": "2051-04-16", "station": "PISTON SA"}, {"token": "24246193", "category": "ITI Apprentices", "dor": "2027-02-01", "station": "PISTON SA"}, {"token": "1047599", "category": "WILP", "dor": "2028-10-12", "station": "CRANKSHAFT SA"}, {"token": "24246155", "category": "ITI Apprentices", "dor": "2027-01-18", "station": "CRANKSHAFT SA"}, {"token": "1086069", "category": "ITI Apprentices", "dor": "2027-06-11", "station": "FRONT COVER SA"}, {"token": "24242737", "category": "TEAM MEMBER", "dor": "2053-06-09", "station": "FRONT COVER SA"}, {"token": "1042335", "category": "Learn & Earn", "dor": "2028-01-08", "station": "OIL PUMP SA"}, {"token": "24241247", "category": "Team Member", "dor": "2042-08-14", "station": "CRANKSHAFT CLEANING M/C"}, {"token": "1072401", "category": "LEARN & EARN", "dor": "2029-04-01", "station": "CAMSHAFT SA"}, {"token": "24241549", "category": "Team Member", "dor": "2052-05-19", "station": "NEW PROJECT"}, {"token": "24242394", "category": "Team Member", "dor": "2054-12-17", "station": "NEW PROJECT"}]
         },
         2: {
           name: "Group-02",
-          operators: [
-            "Rajesh Verma", "Amit Patil", "P. Suresh", "Tushal B.", 
-            "Manisha K.", "Sunil Goud", "Narasimha Reddy", "Wajid Khan", 
-            "Vikas Sharma", "Ganesh Kalsait", "Santosh Kumar", "D. Srinivas", 
-            "K. Ravi Teja", "M. Venkatesh", "Prashant Gala"
-          ]
+          operators: ["M PRASANNA KUMAR", "THALLAPALLY LAXMAN", "AKASH", "KARCHAL POUL", "ABDUL RAHIMAN", "K.PRASHANTH KUMAR", "MANNE RAMESH", "B SHIVA KUMAR", "R SIKIANDER", "MUNEER PASHA", "U SANTOSH", "ALTAF HUSAIN", "JAFAR", "DURKI SAITEJA", "GOREPALLY CHARAN GOUD", "PRASHANTH..", "BEGARI NAGARAJ", "BIRDAR NITISH", "EDIGI HARI PRASAD GOUD", "MOHAMMED AHMED", "CHAKALI RAVI", "S DURGESH GOUD", "MYATARI JASHIVA", "MANIKANTH", "MOSIN", "Y.BALRAJ", "KUMMARI GANESH", "CHAWAN VINOD", "MALLESHAM", "B JAGADISHWAR REDDY", "MD MERAJ QURESHI", "KADALA NARESH KUMAR", "G SRIKANTH"],
+          details: [{"token": "1050892", "category": "WILP", "dor": "2028-11-16", "station": "ML-10"}, {"token": "1073095", "category": "WILP", "dor": "2029-04-08", "station": "ML-10"}, {"token": "1044612", "category": "WILP", "dor": "2028-07-15", "station": "ML-10"}, {"token": "24246372", "category": "ITI APPRENTICS", "dor": "2027-04-08", "station": "ML-11"}, {"token": "24246606", "category": "PMIS", "dor": "2027-04-16", "station": "ML-11"}, {"token": "24241992", "category": "PERMANENT", "dor": "2051-11-09", "station": "ML-12"}, {"token": "1048428", "category": "LEARN & EARN", "dor": "2028-11-19", "station": "ML-12"}, {"token": "1073096", "category": "WILP", "dor": "2029-04-08", "station": "ML-13"}, {"token": "1072370", "category": "LEARN & EARN", "dor": "2029-04-01", "station": "ML-13"}, {"token": "24246370", "category": "ITI APPRENTICS", "dor": "2027-04-08", "station": "ROSR LT"}, {"token": "24246904", "category": "ITI APPRENTICS", "dor": "2027-10-14", "station": "ML-14"}, {"token": "1048436", "category": "WILP", "dor": "2028-10-19", "station": "ML-15"}, {"token": "24246367", "category": "ITI APPRENTICS", "dor": "2027-04-08", "station": "ML-15"}, {"token": "24246875", "category": "PMIS", "dor": "2027-07-11", "station": "ML-15"}, {"token": "24246873", "category": "PMIS", "dor": "2027-07-11", "station": "DL"}, {"token": "1053383", "category": "LEARN & EARN", "dor": "2028-12-14", "station": "DL"}, {"token": "1049536", "category": "LEARN & EARN", "dor": "2028-11-09", "station": "DL"}, {"token": "1053392", "category": "WILP", "dor": "2028-12-14", "station": "DL"}, {"token": "1050738", "category": "LEARN & EARN", "dor": "2028-11-16", "station": "DL"}, {"token": "24246618", "category": "PMIS", "dor": "2027-04-16", "station": "DL"}, {"token": "", "category": "", "dor": "", "station": "DL"}, {"token": "24242392", "category": "PERMANENT", "dor": "2051-11-09", "station": "CHSA"}, {"token": "1048810", "category": "LEARN & EARN", "dor": "2028-11-02", "station": "CHSA"}, {"token": "1048387", "category": "LEARN & EARN", "dor": "2028-11-26", "station": "CHSA"}, {"token": "1056899", "category": "LEARN & EARN", "dor": "2029-01-18", "station": "CHSA"}, {"token": "24242600", "category": "PERMANENT", "dor": "2051-11-09", "station": "CHSA"}, {"token": "24246357", "category": "ITI APPRENTICS", "dor": "2027-04-01", "station": "CHSA"}, {"token": "24246638", "category": "PMIS", "dor": "2027-04-26", "station": "CHSA"}, {"token": "24242317", "category": "PERMANENT", "dor": "2051-11-09", "station": "EGR SA"}, {"token": "1042315", "category": "WILP", "dor": "2028-03-02", "station": "EGR SA"}, {"token": "1044480", "category": "WILP", "dor": "2028-08-04", "station": "GPM"}, {"token": "1044189", "category": "WILP", "dor": "2028-06-09", "station": "K2 USA CL HEAD"}, {"token": "24242389", "category": "PERMANENT", "dor": "2051-11-09", "station": "NEW PRODUCT"}]
         },
         3: {
           name: "Group-03",
-          operators: [
-            "Priya Nair", "Sunita Bai", "Laxminarayana V.", "Somasekhar B.", 
-            "Bhartendu Parmar", "Sai Prasad", "Madhu Kandati", "Padamati Komaraiah", 
-            "Siba Prasad Jena", "Kiran Deep", "Harish Chandra", "Manohar Joshi", 
-            "Satish Chander", "Ashok Kumar", "Govind Rao"
-          ]
+          operators: ["N.DURGA RAJU", "B.PRABHU KUMAR", "K Naveenkumar", "D.PRAVEEN KUMAR", "J Gopi", "M MAHESH", "SHAIK MUSTAFA", "BEGARI JANARDHAN", "NIMMALA SRIKANTH", "GANESH", "PRADEEP", "GOUNI NIHAL", "ADEPU JASHWANTH", "MUKKANNAGARI JAMES", "MUKKANNAGARI DAVID", "PUTTI ANJAIAH", "JADAHARISHKUMAR", "ALIGE PRAVEEN KUMAR", "MUNJUGANI BASWARAJ", "POTHUGANTIWAR SHIVAKUMAR", "GAJANAND", "PILIP", "PRABHU", "YERUKULA NAVEEN", "GADDABAI SANDEEP", "RACHEET"],
+          details: [{"token": "24241544", "category": "PERMANENT", "dor": "2049-01-27", "station": "TESTING"}, {"token": "24241259", "category": "PERMANENT", "dor": "2052-08-05", "station": "TESTING"}, {"token": "24241311", "category": "PERMANENT", "dor": "2050-09-14", "station": "TESTING"}, {"token": "24241336", "category": "PERMANENT", "dor": "2050-04-23", "station": "TESTING"}, {"token": "24242738", "category": "PERMANENT", "dor": "2055-09-07", "station": "TESTING"}, {"token": "24241828", "category": "PERMANENT", "dor": "2050-04-17", "station": "TESTING"}, {"token": "24241550", "category": "NEW PROJECT", "dor": "2051-01-09", "station": "TESTING"}, {"token": "33440815", "category": "", "dor": "", "station": "TESTING"}, {"token": "44550500", "category": "", "dor": "", "station": "TESTING"}, {"token": "24245736", "category": "", "dor": "", "station": "TESTING"}, {"token": "44550618", "category": "", "dor": "", "station": "TESTING"}, {"token": "33440773", "category": "", "dor": "", "station": "TESTING"}, {"token": "24245762", "category": "", "dor": "", "station": "TESTING"}, {"token": "24245777", "category": "", "dor": "", "station": "TESTING"}, {"token": "24245779", "category": "", "dor": "", "station": "TESTING"}, {"token": "1048926", "category": "", "dor": "", "station": "TESTING"}, {"token": "1050710", "category": "", "dor": "2028-11-16", "station": "TESTING"}, {"token": "1055111", "category": "", "dor": "2028-12-29", "station": "TESTING"}, {"token": "1058038", "category": "", "dor": "2029-02-01", "station": "TESTING"}, {"token": "1056888", "category": "", "dor": "2029-01-18", "station": "TESTING"}, {"token": "24246366", "category": "", "dor": "2027-04-08", "station": "TESTING"}, {"token": "24246545", "category": "", "dor": "2027-03-25", "station": "TESTING"}, {"token": "24246662", "category": "", "dor": "2027-04-26", "station": "TESTING"}, {"token": "24246584", "category": "", "dor": "", "station": "TESTING"}, {"token": "24246588", "category": "", "dor": "2027-04-16", "station": "TESTING"}, {"token": "24246543", "category": "PMIS", "dor": "", "station": "TESTING"}]
         }
       },
       // Stores attendance for all months: { "YYYY-MM": { 1: { opIdx: [] }, 2: { ... }, 3: { ... } } }
@@ -1230,21 +1636,32 @@
       APP_STATE.selectedYear = 2026;
       APP_STATE.selectedMonth = 10; // November
       APP_STATE.daysInMonth = calculateDaysInMonth(2026, 10);
-      APP_STATE.selectedDate = '2026-11-10';
+      APP_STATE.selectedDate = '2026-11-15';
 
       saveToStorage();
     }
 
-        // --- DEBOUNCED LOCAL STORAGE (PREVENTS UI FREEZING) ---
+    // --- DEBOUNCED LOCAL STORAGE (PREVENTS UI FREEZING) ---
     let storageTimer = null;
     function debouncedSaveToStorage() {
+      const storageBadge = document.getElementById('storageStatusBadge');
+      const syncIcon = document.getElementById('syncSaveIcon');
+      if (storageBadge) {
+        storageBadge.textContent = 'Syncing...';
+        storageBadge.className = 'tracking-tight text-amber-300';
+      }
+      if (syncIcon) {
+        syncIcon.classList.add('animate-spin', 'text-amber-300');
+      }
       clearTimeout(storageTimer);
-      storageTimer = setTimeout(saveToStorage, 150);
+      storageTimer = setTimeout(saveToStorage, 180);
     }
+
     // --- LOCAL STORAGE HANDLING (PERMANENT PERSISTENCE) ---
     function saveToStorage() {
       try {
         const payload = {
+          rosterVersion: APP_STATE.rosterVersion,
           groups: APP_STATE.groups,
           monthlyAttendance: APP_STATE.monthlyAttendance,
           selectedYear: APP_STATE.selectedYear,
@@ -1253,11 +1670,24 @@
           currentTab: APP_STATE.currentTab
         };
         localStorage.setItem('ATTENDANCE_APP_MULTI_MONTH', JSON.stringify(payload));
-        // Visual indicator that data is safely preserved
-        const storageBadge = document.getElementById('storageStatusBadge');
-        if (storageBadge) {
-          storageBadge.textContent = 'Auto-Saved ✓';
-          storageBadge.className = 'text-[9px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40 shadow-sm';
+        if (isCloudConnected && db) {
+          const mKey = getActiveMonthKey();
+          pushMonthToCloud(mKey, APP_STATE.monthlyAttendance[mKey] || {});
+          pushRosterToCloud();
+        } else {
+          const storageBadge = document.getElementById('storageStatusBadge');
+          const syncIcon = document.getElementById('syncSaveIcon');
+          if (storageBadge) {
+            storageBadge.textContent = 'Local Saved (Setup Cloud ☁️)';
+            storageBadge.className = 'tracking-tight text-amber-300';
+          }
+          if (syncIcon) {
+            syncIcon.classList.remove('animate-spin', 'text-amber-300');
+          }
+        }
+        if (syncIcon) {
+          syncIcon.classList.remove('animate-spin', 'text-amber-300');
+          syncIcon.classList.add('text-emerald-400');
         }
       } catch (e) {
         console.warn("Storage quota exceeded or disabled", e);
@@ -1269,7 +1699,7 @@
         const raw = localStorage.getItem('ATTENDANCE_APP_MULTI_MONTH');
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed && parsed.monthlyAttendance && typeof parsed.monthlyAttendance === 'object') {
+          if (parsed && parsed.rosterVersion === APP_STATE.rosterVersion && parsed.monthlyAttendance && typeof parsed.monthlyAttendance === 'object') {
             APP_STATE.groups = parsed.groups || APP_STATE.groups;
             APP_STATE.monthlyAttendance = parsed.monthlyAttendance;
             if (typeof parsed.selectedYear === 'number') APP_STATE.selectedYear = parsed.selectedYear;
@@ -1355,6 +1785,7 @@
 
       saveToStorage();
       populateMonthDropdowns();
+      if (isCloudConnected) subscribeToCloudMonth(makeMonthKey(year, monthIndex));
 
       updateKpiDashboard();
       if (APP_STATE.currentTab !== 'kpi') {
@@ -1377,7 +1808,7 @@
       if (!keys.includes(activeKey)) keys.push(activeKey);
 
       // Offer additional selectable options if user wants to log another month
-      const extraMonths = ["2026-08", "2026-09", "2026-10", "2026-11", "2026-12", "2027-01"];
+      const extraMonths = ["2026-08", "2026-09", "2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03", "2027-04"];
       extraMonths.forEach(k => {
         if (!keys.includes(k)) keys.push(k);
       });
@@ -1654,7 +2085,113 @@
     }
 
     // --- RENDER KPI DASHBOARD VIEW ---
+    
+    function formatDOR(dorStr) {
+      if (!dorStr) return '-';
+      const parts = dorStr.split('-');
+      if (parts.length !== 3) return dorStr;
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      if (isNaN(y) || isNaN(m) || isNaN(d) || m < 1 || m > 12) return dorStr;
+      return `${String(d).padStart(2, '0')} ${MONTH_NAMES[m - 1].slice(0, 3)} ${y}`;
+    }
+
+    function updateRelievingKpiCard() {
+      const targetYear = APP_STATE.selectedYear;
+      const targetMonth = APP_STATE.selectedMonth + 1; // 1-12
+      const targetYM = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+      const mName = `${MONTH_NAMES[APP_STATE.selectedMonth]} ${targetYear}`;
+
+      const labelEl = document.getElementById('relievingMonthLabel');
+      const badgeEl = document.getElementById('relievingCountBadge');
+      const hintEl = document.getElementById('nextRelievingHint');
+      const listEl = document.getElementById('relievingOperatorsList');
+      if (!listEl) return;
+
+      if (labelEl) labelEl.textContent = mName;
+
+      const relievingNow = [];
+      const upcomingAll = [];
+
+      [1, 2, 3].forEach(gId => {
+        const group = APP_STATE.groups[gId];
+        const details = group.details || [];
+        group.operators.forEach((name, opIdx) => {
+          const det = details[opIdx] || {};
+          const dor = det.dor || '';
+          if (!dor) return;
+          if (dor.startsWith(targetYM)) {
+            relievingNow.push({
+              name, group: group.name, groupId: gId, opIdx,
+              token: det.token || '-', category: det.category || '-',
+              station: det.station || '-', dor
+            });
+          } else if (dor > `${targetYM}-31`) {
+            upcomingAll.push({
+              name, group: group.name, groupId: gId, opIdx,
+              token: det.token || '-', category: det.category || '-',
+              station: det.station || '-', dor
+            });
+          }
+        });
+      });
+
+      relievingNow.sort((a, b) => a.dor.localeCompare(b.dor));
+      upcomingAll.sort((a, b) => a.dor.localeCompare(b.dor));
+
+      if (badgeEl) {
+        if (relievingNow.length > 0) {
+          badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200';
+          badgeEl.textContent = `${relievingNow.length} Relieving`;
+        } else {
+          badgeEl.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
+          badgeEl.textContent = '0 Relieving';
+        }
+      }
+
+      if (hintEl) {
+        if (upcomingAll.length > 0) {
+          const nextDor = upcomingAll[0].dor;
+          hintEl.textContent = `Next relieving: ${formatDOR(nextDor)}`;
+        } else {
+          hintEl.textContent = 'No upcoming relieving dates';
+        }
+      }
+
+      if (relievingNow.length > 0) {
+        listEl.innerHTML = relievingNow.map(op => `
+          <div class="card-3d card-3d-amber p-3 rounded-xl flex items-center justify-between text-xs cursor-pointer" onclick="openEditOperatorModal(${op.groupId}, ${op.opIdx})">
+            <div class="min-w-0 pr-2">
+              <strong class="font-bold text-slate-900 block truncate">${op.name}</strong>
+              <span class="text-[11px] text-slate-600 block truncate">${op.group} | ${op.station}</span>
+              <span class="text-[10px] text-slate-500 font-mono">Token: ${op.token}</span>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <span class="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold border border-rose-200 text-[11px]">${formatDOR(op.dor)}</span>
+              <span class="block text-[10px] text-slate-500 mt-0.5">${op.category}</span>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        const preview = upcomingAll.slice(0, 3);
+        if (preview.length > 0) {
+          listEl.innerHTML = `
+            <div class="col-span-full text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span>No operators scheduled for relieving in <strong>${mName}</strong>. Earliest upcoming DOR:</span>
+              <div class="flex flex-wrap gap-1.5">
+                ${preview.map(op => `<span class="px-2 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-medium text-slate-700 cursor-pointer hover:border-indigo-300" onclick="openEditOperatorModal(${op.groupId}, ${op.opIdx})"><strong>${op.name}</strong> (${op.group}) — ${formatDOR(op.dor)}</span>`).join('')}
+              </div>
+            </div>
+          `;
+        } else {
+          listEl.innerHTML = `<div class="col-span-full text-xs text-slate-500 p-2">No operators scheduled for relieving in ${mName}.</div>`;
+        }
+      }
+    }
+
     function updateKpiDashboard() {
+      updateRelievingKpiCard();
       const selectedDay = new Date(APP_STATE.selectedDate).getDate();
       const metrics = calculateMetrics(selectedDay - 1);
 
@@ -1691,11 +2228,11 @@
       document.getElementById('kpiCriticalGroupPct').textContent = `${highestPct.toFixed(1)}% (${metrics.groupBreakdown[highestG].absent} Abs)`;
 
       // Group Mini Cards
-      document.getElementById('g1CardSub').textContent = `${APP_STATE.groups[1].operators.length} Manpower • ${metrics.groupBreakdown[1].absent} Absent`;
+      document.getElementById('g1CardSub').textContent = `${APP_STATE.groups[1].operators.length} operators — ${metrics.groupBreakdown[1].absent} Absent`;
       document.getElementById('g1CardPct').textContent = `${metrics.groupBreakdown[1].absentPct.toFixed(1)}%`;
-      document.getElementById('g2CardSub').textContent = `${APP_STATE.groups[2].operators.length} Manpower • ${metrics.groupBreakdown[2].absent} Absent`;
+      document.getElementById('g2CardSub').textContent = `${APP_STATE.groups[2].operators.length} operators — ${metrics.groupBreakdown[2].absent} Absent`;
       document.getElementById('g2CardPct').textContent = `${metrics.groupBreakdown[2].absentPct.toFixed(1)}%`;
-      document.getElementById('g3CardSub').textContent = `${APP_STATE.groups[3].operators.length} Manpower • ${metrics.groupBreakdown[3].absent} Absent`;
+      document.getElementById('g3CardSub').textContent = `${APP_STATE.groups[3].operators.length} operators — ${metrics.groupBreakdown[3].absent} Absent`;
       document.getElementById('g3CardPct').textContent = `${metrics.groupBreakdown[3].absentPct.toFixed(1)}%`;
 
       // Top Absenteeism Manpower Table
@@ -1750,6 +2287,10 @@
       let headerHtml = `
         <th class="p-2.5 w-12 text-center sticky-col-1 bg-slate-900 border-r border-slate-800">#</th>
         <th class="p-2.5 w-44 text-left sticky-col-2 bg-slate-900 border-r border-slate-800">Operator Name</th>
+        <th class="p-2.5 w-24 text-left bg-slate-900 border-r border-slate-800">Token No</th>
+        <th class="p-2.5 w-32 text-left bg-slate-900 border-r border-slate-800">Category</th>
+        <th class="p-2.5 w-36 text-left bg-slate-900 border-r border-slate-800" title="Date of Relieving">Date of Relieving (DOR)</th>
+        <th class="p-2.5 w-36 text-left bg-slate-900 border-r border-slate-800">Station</th>
       `;
 
       for (let d = 1; d <= daysCount; d++) {
@@ -1780,18 +2321,28 @@
         let pCount = 0;
         let aCount = 0;
 
+        const det = (group.details && group.details[opIdx]) ? group.details[opIdx] : {};
+        const opToken = det.token || '-';
+        const opCat = det.category || '-';
+        const opDor = formatDOR(det.dor);
+        const opStation = det.station || '-';
+
         let cellsHtml = `
           <td class="p-2 text-center text-slate-500 font-mono text-[11px] sticky-col-1 bg-white border-r border-slate-200">${opIdx + 1}</td>
           <td class="p-2 font-medium text-slate-800 sticky-col-2 bg-white border-r border-slate-200 sticky-col-shadow max-w-[190px]">
             <div class="flex items-center justify-between group">
-              <span class="truncate cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})" title="Click to edit operator name: ${name}">${name}</span>
-              <button onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 opacity-60 group-hover:opacity-100 p-1 rounded transition text-xs flex-shrink-0" title="Edit operator name">
+              <span class="truncate cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})" title="Click to edit operator: ${name}">${name}</span>
+              <button onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 opacity-60 group-hover:opacity-100 p-1 rounded transition text-xs flex-shrink-0" title="Edit operator">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </button>
             </div>
           </td>
+          <td class="p-2 font-mono text-[11px] text-slate-600 border-r border-slate-200 whitespace-nowrap">${opToken}</td>
+          <td class="p-2 text-[11px] text-slate-700 border-r border-slate-200 whitespace-nowrap">${opCat}</td>
+          <td class="p-2 font-mono text-[11px] text-slate-700 border-r border-slate-200 whitespace-nowrap">${opDor}</td>
+          <td class="p-2 text-[11px] font-medium text-slate-700 border-r border-slate-200 whitespace-nowrap">${opStation}</td>
         `;
 
         for (let d = 1; d <= daysCount; d++) {
@@ -1842,10 +2393,12 @@
       let monthTotalP = 0;
       let monthTotalA = 0;
 
-      let fTotCells = `<td class="p-2 text-center sticky-col-1 bg-slate-100 border-r border-slate-200">Σ</td><td class="p-2 font-bold sticky-col-2 bg-slate-100 border-r border-slate-200">Total Operators</td>`;
-      let fPresCells = `<td class="p-2 text-center sticky-col-1 bg-emerald-100 border-r border-slate-200">✓</td><td class="p-2 font-bold sticky-col-2 bg-emerald-100 border-r border-slate-200">Daily Present Count</td>`;
-      let fAbsCells = `<td class="p-2 text-center sticky-col-1 bg-rose-100 border-r border-slate-200">✗</td><td class="p-2 font-bold sticky-col-2 bg-rose-100 border-r border-slate-200">Daily Absent Count</td>`;
-      let fPctCells = `<td class="p-2.5 text-center sticky-col-1 bg-rose-200 border-r border-slate-300 font-extrabold">%</td><td class="p-2.5 font-extrabold sticky-col-2 bg-rose-200 border-r border-slate-300 text-rose-950 uppercase tracking-tight">DAILY % ABSENT</td>`;
+      const metaBlank = `<td colspan="4" class="p-2 border-r border-slate-200"></td>`;
+      const metaBlankPct = `<td colspan="4" class="p-2 border-r border-rose-300"></td>`;
+      let fTotCells = `<td class="p-2 text-center sticky-col-1 bg-slate-100 border-r border-slate-200">Σ</td><td class="p-2 font-bold sticky-col-2 bg-slate-100 border-r border-slate-200">Total Operators</td>${metaBlank}`;
+      let fPresCells = `<td class="p-2 text-center sticky-col-1 bg-emerald-100 border-r border-slate-200">✓</td><td class="p-2 font-bold sticky-col-2 bg-emerald-100 border-r border-slate-200">Daily Present Count</td>${metaBlank}`;
+      let fAbsCells = `<td class="p-2 text-center sticky-col-1 bg-rose-100 border-r border-slate-200">✗</td><td class="p-2 font-bold sticky-col-2 bg-rose-100 border-r border-slate-200">Daily Absent Count</td>${metaBlank}`;
+      let fPctCells = `<td class="p-2.5 text-center sticky-col-1 bg-rose-200 border-r border-slate-300 font-extrabold">%</td><td class="p-2.5 font-extrabold sticky-col-2 bg-rose-200 border-r border-slate-300 text-rose-950 tracking-tight">Daily % Absent</td>${metaBlankPct}`;
 
       for (let d = 1; d <= daysCount; d++) {
         let dayP = 0;
@@ -1961,9 +2514,11 @@
                     <h4 class="font-bold text-slate-900 text-sm cursor-pointer hover:text-indigo-600 transition" onclick="openEditOperatorModal(${groupId}, ${opIdx})">${name}</h4>
                     <button type="button" onclick="openEditOperatorModal(${groupId}, ${opIdx})" class="text-slate-400 hover:text-indigo-600 text-xs p-0.5" title="Edit name">✏️</button>
                   </div>
-                  <div class="flex items-center space-x-1.5 text-[11px] text-slate-500">
-                    <span class="font-semibold text-slate-700">${group.name}</span>
-                    <span>•</span>
+                  <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-500">
+                    <span class="font-semibold text-slate-700">${(group.details && group.details[opIdx] && group.details[opIdx].station) || group.name}</span>
+                    <span class="text-slate-300">|</span>
+                    <span>DOR: <strong class="text-slate-700">${formatDOR((group.details && group.details[opIdx] && group.details[opIdx].dor) || '')}</strong></span>
+                    <span class="text-slate-300">|</span>
                     <span>MTD: <strong class="${opTotalA > 3 ? 'text-rose-600 font-bold' : 'text-slate-700'}">${opTotalA} Abs (${opPct}%)</strong></span>
                   </div>
                 </div>
@@ -2004,7 +2559,11 @@
       if (!mData[groupId][opIdx]) mData[groupId][opIdx] = [];
       mData[groupId][opIdx][dayIdx] = status;
 
-      debouncedSaveToStorage();
+      if (isCloudConnected && db) {
+        pushSingleOperatorDayToCloud(getActiveMonthKey(), groupId, opIdx, mData[groupId][opIdx]);
+      } else {
+        debouncedSaveToStorage();
+      }
       if (currentMatrixViewMode === 'cards') {
         renderMobileRollCallCards(groupId);
       } else {
@@ -2025,7 +2584,11 @@
       else if (current === 'WO') mData[groupId][opIdx][dayIdx] = 'P';
       else mData[groupId][opIdx][dayIdx] = 'P'; // From Blank -> Present
 
-      debouncedSaveToStorage();
+      if (isCloudConnected && db) {
+        pushSingleOperatorDayToCloud(monthKey, groupId, opIdx, mData[groupId][opIdx]);
+      } else {
+        debouncedSaveToStorage();
+      }
       renderGroupMatrix(groupId);
       if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
     };
@@ -2037,9 +2600,14 @@
       if (!group || !group.operators[opIdx]) return;
       const currentName = group.operators[opIdx];
 
+      const det = (group.details && group.details[opIdx]) ? group.details[opIdx] : {};
       document.getElementById('editOpOriginalGroup').value = groupId;
       document.getElementById('editOpOriginalIdx').value = opIdx;
       document.getElementById('editOpNameInput').value = currentName;
+      document.getElementById('editOpTokenInput').value = det.token || '';
+      document.getElementById('editOpCategoryInput').value = det.category || '';
+      document.getElementById('editOpDorInput').value = det.dor || '';
+      document.getElementById('editOpStationInput').value = det.station || '';
       document.getElementById('editOpGroupSelect').value = groupId;
 
       document.getElementById('editOperatorModal').classList.remove('hidden');
@@ -2066,13 +2634,22 @@
         return;
       }
 
-      const oldName = APP_STATE.groups[origGroupId].operators[opIdx];
+      const updatedDetails = {
+        token: document.getElementById('editOpTokenInput').value.trim(),
+        category: document.getElementById('editOpCategoryInput').value.trim(),
+        dor: document.getElementById('editOpDorInput').value.trim(),
+        station: document.getElementById('editOpStationInput').value.trim()
+      };
 
       if (origGroupId === newGroupId) {
         APP_STATE.groups[origGroupId].operators[opIdx] = newName;
+        if (!APP_STATE.groups[origGroupId].details) APP_STATE.groups[origGroupId].details = [];
+        APP_STATE.groups[origGroupId].details[opIdx] = updatedDetails;
       } else {
         const targetGroup = APP_STATE.groups[newGroupId];
         targetGroup.operators.push(newName);
+        if (!targetGroup.details) targetGroup.details = [];
+        targetGroup.details.push(updatedDetails);
         const newOpIdx = targetGroup.operators.length - 1;
 
         Object.keys(APP_STATE.monthlyAttendance).forEach(mKey => {
@@ -2085,6 +2662,7 @@
         });
 
         APP_STATE.groups[origGroupId].operators.splice(opIdx, 1);
+        if (APP_STATE.groups[origGroupId].details) APP_STATE.groups[origGroupId].details.splice(opIdx, 1);
 
         Object.keys(APP_STATE.monthlyAttendance).forEach(mKey => {
           const mData = APP_STATE.monthlyAttendance[mKey];
@@ -2453,7 +3031,7 @@
         gRows.push([]);
 
         // Header Row
-        const gHeader = ["Sr.No", "Operator Name"];
+        const gHeader = ["Sr.No", "Token No", "Operator Name", "Category", "Date of Relieving (DOR)", "Station"];
         for (let d = 1; d <= daysCount; d++) {
           gHeader.push(`D${d}`);
         }
@@ -2464,7 +3042,8 @@
         group.operators.forEach((name, opIdx) => {
           let pCount = 0;
           let aCount = 0;
-          const row = [opIdx + 1, name];
+          const det = (group.details && group.details[opIdx]) ? group.details[opIdx] : {};
+          const row = [opIdx + 1, det.token || "", name, det.category || "", formatDOR(det.dor), det.station || ""];
 
           for (let d = 1; d <= daysCount; d++) {
             const st = gAttendance[opIdx] ? gAttendance[opIdx][d - 1] : "";
@@ -2483,10 +3062,10 @@
         gRows.push([]);
 
         // Bottom Summary Rows (as requested by user)
-        const totalOpsRow = ["-", "TOTAL OPERATORS"];
-        const dailyPresRow = ["-", "DAILY PRESENT"];
-        const dailyAbsRow = ["-", "DAILY ABSENT"];
-        const dailyPctRow = ["%", "DAILY % ABSENT"];
+        const totalOpsRow = ["-", "", "TOTAL OPERATORS", "", "", ""];
+        const dailyPresRow = ["-", "", "DAILY PRESENT", "", "", ""];
+        const dailyAbsRow = ["-", "", "DAILY ABSENT", "", "", ""];
+        const dailyPctRow = ["%", "", "DAILY % ABSENT", "", "", ""];
 
         let mSumP = 0;
         let mSumA = 0;
@@ -2809,6 +3388,13 @@
 
         const group = APP_STATE.groups[gId];
         group.operators.push(name);
+        if (!group.details) group.details = [];
+        group.details.push({
+          token: document.getElementById('newOpToken').value.trim(),
+          category: document.getElementById('newOpCategory').value.trim(),
+          dor: document.getElementById('newOpDor').value.trim(),
+          station: document.getElementById('newOpStation').value.trim()
+        });
         const newIdx = group.operators.length - 1;
 
         // Add to all stored months
@@ -2926,7 +3512,7 @@
       if (jumpTodayBtn) {
         jumpTodayBtn.addEventListener('click', () => {
           const todayDate = new Date().getDate();
-          const thToday = document.querySelector('#tableHeaderRow th:nth-child(' + (todayDate + 2) + ')');
+          const thToday = document.querySelector('#tableHeaderRow th:nth-child(' + (todayDate + 6) + ')');
           if (thToday) {
             thToday.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             showToast("Centered", `Scrolled to Day ${todayDate}`, "success");
@@ -3101,6 +3687,138 @@
         confirmClearBtn.addEventListener('click', executeClearAttendanceData);
       }
 
+      
+      // 15. Interactive Sync & Auto-Save Capsule Button Listener
+      const syncSaveActionBtn = document.getElementById('syncSaveActionBtn');
+      if (syncSaveActionBtn) {
+        syncSaveActionBtn.addEventListener('click', () => {
+          if (!isCloudConnected) {
+            openCloudModal();
+            return;
+          }
+          const storageBadge = document.getElementById('storageStatusBadge');
+          const syncIcon = document.getElementById('syncSaveIcon');
+          if (storageBadge) {
+            storageBadge.textContent = 'Syncing...';
+            storageBadge.className = 'tracking-tight text-amber-300';
+          }
+          if (syncIcon) {
+            syncIcon.classList.add('animate-spin', 'text-amber-300');
+          }
+          setTimeout(() => {
+            saveToStorage();
+            if (APP_STATE.currentTab === 'kpi') {
+              updateKpiDashboard();
+            } else {
+              const gId = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
+              renderGroupMatrix(gId);
+            }
+            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            showToast("Synced & Saved", `All attendance records & KPIs saved at ${nowStr}`, "success");
+          }, 220);
+        });
+      }
+
+      
+      // 16. Pillar 1: Interactive Group Card Navigation & Live Paste Auto-Detection
+      const cardJumpG1 = document.getElementById('cardJumpG1');
+      const cardJumpG2 = document.getElementById('cardJumpG2');
+      const cardJumpG3 = document.getElementById('cardJumpG3');
+      if (cardJumpG1) cardJumpG1.addEventListener('click', () => setTab('group1'));
+      if (cardJumpG2) cardJumpG2.addEventListener('click', () => setTab('group2'));
+      if (cardJumpG3) cardJumpG3.addEventListener('click', () => setTab('group3'));
+
+      // Instant auto-detect on paste inside 5:00 PM message box (saves 1 click!)
+      const pastedMsgBox = document.getElementById('pastedMessageInput');
+      if (pastedMsgBox) {
+        pastedMsgBox.addEventListener('paste', () => {
+          setTimeout(() => {
+            const parseBtn = document.getElementById('parseMessageBtn');
+            if (parseBtn) parseBtn.click();
+          }, 60);
+        });
+      }
+
+      // Pillar 2 Accessibility: Close any open modal with Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          ['checkinModal', 'exportModal', 'addOperatorModal', 'editOperatorModal', 'manageRosterModal', 'clearDataModal', 'cloudSetupModal'].forEach(id => {
+            const m = document.getElementById(id);
+            if (m && !m.classList.contains('hidden')) m.classList.add('hidden');
+          });
+        }
+      });
+
+      
+      // 17. Cloud Setup Modal Listeners & Auto-Connect
+      const cloudModal = document.getElementById('cloudSetupModal');
+      const openCloudBtn = document.getElementById('openCloudSettingsBtn');
+      const closeCloudBtn = document.getElementById('closeCloudModalBtn');
+      const cancelCloudBtn = document.getElementById('cancelCloudModalBtn');
+      const saveCloudBtn = document.getElementById('saveCloudConfigBtn');
+      const disconnectCloudBtn = document.getElementById('disconnectCloudBtn');
+      const memberInput = document.getElementById('teamMemberNameInput');
+      const cfgInput = document.getElementById('firebaseConfigInput');
+
+      function openCloudModal() {
+        if (memberInput) memberInput.value = getTeamMemberName();
+        const existing = getStoredFirebaseConfig();
+        if (cfgInput && existing) {
+          cfgInput.value = JSON.stringify(existing, null, 2);
+        }
+        cloudModal.classList.remove('hidden');
+      }
+
+      if (openCloudBtn) openCloudBtn.addEventListener('click', openCloudModal);
+      if (closeCloudBtn) closeCloudBtn.addEventListener('click', () => cloudModal.classList.add('hidden'));
+      if (cancelCloudBtn) cancelCloudBtn.addEventListener('click', () => cloudModal.classList.add('hidden'));
+
+      if (saveCloudBtn) {
+        saveCloudBtn.addEventListener('click', () => {
+          const memberName = (memberInput.value || '').trim() || 'Team Member';
+          localStorage.setItem('ATTENDANCE_TEAM_MEMBER_NAME', memberName);
+
+          const rawCfg = cfgInput.value.trim();
+          if (rawCfg) {
+            try {
+              const parsed = parseFirebaseConfigInput(rawCfg);
+              if (!parsed || !parsed.projectId) {
+                showToast("Invalid Config", "Please paste a valid Firebase config containing projectId.", "warning");
+                return;
+              }
+              localStorage.setItem('ATTENDANCE_FIREBASE_CONFIG', JSON.stringify(parsed));
+              cloudModal.classList.add('hidden');
+              initCloudSync();
+              showToast("Cloud Connected", `Connected to ${parsed.projectId} as ${memberName}`, "success");
+            } catch (e) {
+              showToast("Config Error", "Could not parse Firebase config. Paste the JSON or JS object from Firebase Console.", "warning");
+            }
+          } else {
+            updateCloudStatusUI(isCloudConnected);
+            cloudModal.classList.add('hidden');
+            showToast("Name Saved", `Active team member set to ${memberName}`, "success");
+          }
+        });
+      }
+
+      if (disconnectCloudBtn) {
+        disconnectCloudBtn.addEventListener('click', () => {
+          localStorage.removeItem('ATTENDANCE_FIREBASE_CONFIG');
+          if (cloudMonthUnsub) cloudMonthUnsub();
+          if (cloudRosterUnsub) cloudRosterUnsub();
+          isCloudConnected = false;
+          db = null;
+          updateCloudStatusUI(false);
+          cloudModal.classList.add('hidden');
+          showToast("Cloud Disconnected", "Switched to local browser storage.", "warning");
+        });
+      }
+
+      // Initialize Cloud Sync on startup if configured
+      setTimeout(() => {
+        initCloudSync();
+      }, 150);
+
       // Initial render: restore saved tab or render dashboard
       if (APP_STATE.currentTab && APP_STATE.currentTab !== 'kpi') {
         setTab(APP_STATE.currentTab);
@@ -3129,7 +3847,7 @@
       <span class="text-[10px] mt-0.5">Group 3</span>
     </button>
     <button id="mobNavCheckin" class="flex flex-col items-center justify-center py-1 px-2 text-amber-400 font-bold transition flex-1">
-      <span class="text-lg animate-bounce">⏰</span>
+      <span class="text-lg ">⏰</span>
       <span class="text-[10px] mt-0.5 font-extrabold text-amber-300">5PM Check</span>
     </button>
   </nav>
