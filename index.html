@@ -373,6 +373,10 @@
             <span class="text-slate-500 font-semibold hidden xs:inline">Date:</span>
             <input type="date" id="kpiSelectedDate" aria-label="Select attendance date" class="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer text-xs">
           </div>
+          <button id="pastLockToggleBtn" type="button" class="btn-3d-neutral text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-3 py-2 rounded-xl font-bold border border-slate-200 transition flex items-center space-x-1.5 text-xs cursor-pointer" title="Past dates are locked by default. Click to unlock with Supervisor PIN.">
+            <span id="pastLockIcon">🔒</span>
+            <span id="pastLockLabel">Past Dates Locked</span>
+          </button>
           <button id="clearAttendanceDataBtn" class="btn-3d-rose text-white bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 px-3.5 py-2 rounded-xl font-bold border border-rose-600 transition flex items-center space-x-1.5 shadow-sm text-xs cursor-pointer" title="Clear attendance details for active month">
             <span>🗑️</span>
             <span>Clear Month Attendance</span>
@@ -1271,6 +1275,12 @@
           <p class="text-[11px] text-slate-500 mt-1">Shown on live updates so all 10 team members know who updated the sheet.</p>
         </div>
 
+        <div>
+          <label class="block font-bold text-slate-800 mb-1">Supervisor PIN for Past-Date Edits</label>
+          <input type="password" id="configSupervisorPinInput" inputmode="numeric" maxlength="10" class="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-slate-800 font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Default: 1234">
+          <p class="text-[11px] text-slate-500 mt-1">Required when anyone tries to modify attendance before today's date.</p>
+        </div>
+
         <div class="space-y-1.5">
           <label class="block font-bold text-slate-800">Paste Firebase Config (JSON or JS snippet)</label>
           <textarea id="firebaseConfigInput" rows="6" class="w-full border border-slate-300 rounded-lg p-2.5 font-mono text-[11px] text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-slate-50" placeholder='Paste from Firebase Console -> Project Settings -> Web App:
@@ -1303,6 +1313,43 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  
+  <!-- ========================================== -->
+  <!-- MODAL 8: SUPERVISOR PIN FOR PAST DATES -->
+  <!-- ========================================== -->
+  <div id="supervisorPinModal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl max-w-sm w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col p-6 space-y-4">
+      <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 border border-amber-200 flex items-center justify-center font-bold text-lg flex-shrink-0">
+          🔒
+        </div>
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-base">Supervisor PIN Required</h3>
+          <p class="text-xs text-slate-500">Only today's attendance can be edited freely</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm">
+        <p class="text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          You are trying to update a <strong class="text-amber-900">past date</strong> (<span id="pinAttemptDateLabel" class="font-mono font-bold"></span>). Enter Supervisor PIN to unlock past-date editing for this session.
+        </p>
+        <div>
+          <label for="supervisorPinInput" class="block font-bold text-slate-800 mb-1">Enter Supervisor PIN</label>
+          <input type="password" id="supervisorPinInput" inputmode="numeric" maxlength="10" class="w-full border border-slate-300 rounded-xl p-2.5 font-mono text-center text-base tracking-widest font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••">
+          <p class="text-[11px] text-slate-400 mt-1">Default PIN: <code>1234</code> (changeable in Cloud / Team Setup)</p>
+        </div>
+        <p id="pinErrorMsg" class="text-xs text-rose-600 font-semibold hidden">Incorrect PIN. Please try again.</p>
+      </div>
+
+      <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+        <button id="cancelPinModalBtn" type="button" class="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 text-xs font-semibold">Cancel</button>
+        <button id="verifyPinBtn" type="button" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md transition">
+          Unlock Past Dates
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1552,6 +1599,56 @@
         const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
         pushMonthToCloud(monthKey, mData);
       });
+    }
+
+    
+    // --- PAST-DATE PIN PROTECTION (CURRENT DAY ONLY WITHOUT PIN) ---
+    let pastDatesUnlocked = false;
+    let pendingPastAction = null;
+
+    function getSupervisorPin() {
+      return localStorage.getItem('ATTENDANCE_SUPERVISOR_PIN') || '1234';
+    }
+
+    function isBeforeToday(year, monthIndex, dayNum) {
+      const now = new Date();
+      const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const targetMid = new Date(year, monthIndex, dayNum).getTime();
+      return targetMid < todayMid;
+    }
+
+    function updatePastLockUI() {
+      const iconEl = document.getElementById('pastLockIcon');
+      const lblEl = document.getElementById('pastLockLabel');
+      const btnEl = document.getElementById('pastLockToggleBtn');
+      if (!iconEl || !lblEl || !btnEl) return;
+      if (pastDatesUnlocked) {
+        iconEl.textContent = '🔓';
+        lblEl.textContent = 'Past Dates Unlocked';
+        btnEl.className = 'btn-3d-neutral text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-xl font-bold border border-emerald-300 transition flex items-center space-x-1.5 text-xs cursor-pointer';
+      } else {
+        iconEl.textContent = '🔒';
+        lblEl.textContent = 'Past Dates Locked';
+        btnEl.className = 'btn-3d-neutral text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 px-3 py-2 rounded-xl font-bold border border-slate-200 transition flex items-center space-x-1.5 text-xs cursor-pointer';
+      }
+    }
+
+    function requireCurrentDayOrPin(year, monthIndex, dayNum, onAuthorized) {
+      if (!isBeforeToday(year, monthIndex, dayNum) || pastDatesUnlocked) {
+        onAuthorized();
+        return true;
+      }
+      pendingPastAction = onAuthorized;
+      const dateStr = `${String(dayNum).padStart(2, '0')} ${MONTH_NAMES[monthIndex].slice(0, 3)} ${year}`;
+      const lbl = document.getElementById('pinAttemptDateLabel');
+      if (lbl) lbl.textContent = dateStr;
+      const pinInp = document.getElementById('supervisorPinInput');
+      const errEl = document.getElementById('pinErrorMsg');
+      if (pinInp) pinInp.value = '';
+      if (errEl) errEl.classList.add('hidden');
+      document.getElementById('supervisorPinModal').classList.remove('hidden');
+      setTimeout(() => { if (pinInp) pinInp.focus(); }, 60);
+      return false;
     }
 
     // --- MULTI-MONTH STATE MANAGEMENT ---
@@ -1913,15 +2010,18 @@
         const group = APP_STATE.groups[gId];
         const gAttendance = mData[gId] || {};
 
+        const mShort = MONTH_NAMES[monthIndex].slice(0, 3);
         group.operators.forEach((name, opIdx) => {
           let absDays = 0;
           let workingDaysAttended = 0;
+          const absentDates = [];
 
           if (gAttendance[opIdx]) {
-            gAttendance[opIdx].forEach(st => {
+            gAttendance[opIdx].forEach((st, dIdx) => {
               if (st === 'A') {
                 absDays++;
                 workingDaysAttended++;
+                absentDates.push(`${String(dIdx + 1).padStart(2, '0')} ${mShort}`);
               } else if (st === 'P') {
                 workingDaysAttended++;
               }
@@ -1935,6 +2035,7 @@
             groupId: gId,
             absentDays: absDays,
             totalDays: workingDaysAttended,
+            absentDates,
             pct: Number(opPct.toFixed(1))
           });
         });
@@ -1958,18 +2059,52 @@
     let dailyChartInstance = null;
     let groupChartInstance = null;
 
+    // Custom Chart.js Data Labels Plugin (Zero external dependency)
+    const inlineDataLabelsPlugin = {
+      id: 'inlineDataLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const chartType = chart.config.type;
+        ctx.save();
+        ctx.font = '700 10px "IBM Plex Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        if (chartType === 'line') {
+          const meta = chart.getDatasetMeta(0);
+          const data = chart.data.datasets[0].data;
+          meta.data.forEach((pt, idx) => {
+            const val = data[idx];
+            if (val === null || val === undefined) return;
+            ctx.fillStyle = val > 12 ? '#be123c' : '#334155';
+            ctx.fillText(val + '%', pt.x, pt.y - 6);
+          });
+        } else if (chartType === 'bar') {
+          const meta = chart.getDatasetMeta(0);
+          const data = chart.data.datasets[0].data;
+          meta.data.forEach((bar, idx) => {
+            const val = data[idx];
+            if (val === null || val === undefined) return;
+            ctx.fillStyle = Number(val) > 12 ? '#be123c' : '#1e293b';
+            ctx.fillText(val + '%', bar.x, bar.y - 5);
+          });
+        }
+        ctx.restore();
+      }
+    };
+
     function renderCharts(metrics) {
       if (APP_STATE.currentTab !== 'kpi') return; // Skip heavy canvas drawing when tab is hidden!
 
+      const mShort = MONTH_NAMES[APP_STATE.selectedMonth].slice(0, 3);
       const lineCtx = document.getElementById('dailyAbsentChart');
       if (lineCtx) {
-        const labels = metrics.dailyTrend.map(d => `D${d.day}`);
+        const labels = metrics.dailyTrend.map(d => `${String(d.day).padStart(2, '0')} ${mShort}`);
         const dataValues = metrics.dailyTrend.map(d => d.pct);
         const targetValues = metrics.dailyTrend.map(() => 12.0);
-        const yMax = Math.max(20, Math.ceil(Math.max(...dataValues.filter(v => v !== null), 13) + 3));
+        const yMax = Math.max(20, Math.ceil(Math.max(...dataValues.filter(v => v !== null), 13) + 4));
 
         if (dailyChartInstance) {
-          // Blazing fast in-place update without destroying canvas
           dailyChartInstance.data.labels = labels;
           dailyChartInstance.data.datasets[0].data = dataValues;
           dailyChartInstance.data.datasets[1].data = targetValues;
@@ -1978,6 +2113,7 @@
         } else {
           dailyChartInstance = new Chart(lineCtx, {
             type: 'line',
+            plugins: [inlineDataLabelsPlugin],
             data: {
               labels,
               datasets: [
@@ -1989,7 +2125,7 @@
                   borderWidth: 2,
                   fill: true,
                   tension: 0.2,
-                  pointRadius: 2.5,
+                  pointRadius: 3,
                   pointHoverRadius: 5,
                   spanGaps: false
                 },
@@ -2007,7 +2143,8 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              animation: false, // Zero animation lag
+              animation: false,
+              layout: { padding: { top: 18 } },
               plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -2024,7 +2161,10 @@
                   ticks: { callback: v => v + '%' },
                   grid: { color: '#f1f5f9' }
                 },
-                x: { grid: { display: false } }
+                x: {
+                  grid: { display: false },
+                  ticks: { maxRotation: 45, minRotation: 0, font: { size: 10 } }
+                }
               }
             }
           });
@@ -2039,15 +2179,17 @@
           metrics.groupBreakdown[2].absentPct.toFixed(1),
           metrics.groupBreakdown[3].absentPct.toFixed(1)
         ];
+        const barMax = Math.max(20, Math.ceil(Math.max(...gData.map(Number), 12) + 5));
 
         if (groupChartInstance) {
-          // Blazing fast in-place update
           groupChartInstance.data.labels = gLabels;
           groupChartInstance.data.datasets[0].data = gData;
+          groupChartInstance.options.scales.y.max = barMax;
           groupChartInstance.update('none');
         } else {
           groupChartInstance = new Chart(barCtx, {
             type: 'bar',
+            plugins: [inlineDataLabelsPlugin],
             data: {
               labels: gLabels,
               datasets: [{
@@ -2055,17 +2197,19 @@
                 data: gData,
                 backgroundColor: ['#3b82f6', '#6366f1', '#10b981'],
                 borderRadius: 6,
-                barThickness: 32
+                barThickness: 36
               }]
             },
             options: {
               responsive: true,
               maintainAspectRatio: false,
               animation: false,
+              layout: { padding: { top: 20 } },
               plugins: { legend: { display: false } },
               scales: {
                 y: {
                   beginAtZero: true,
+                  max: barMax,
                   ticks: { callback: v => v + '%' },
                   grid: { color: '#f1f5f9' }
                 },
@@ -2248,6 +2392,7 @@
                 <button type="button" onclick="openEditOperatorByName('${op.name.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-indigo-600 text-[11px] p-0.5" title="Edit name">✏️</button>
               </div>
               <span class="text-[10px] text-slate-400 font-medium">${op.group}</span>
+              ${op.absentDates && op.absentDates.length > 0 ? `<div class="mt-1 flex flex-wrap gap-1">${op.absentDates.map(dt => `<span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[9px] font-mono font-semibold">${dt}</span>`).join('')}</div>` : ''}
             </div>
           </div>
           <div class="text-right">
@@ -2548,7 +2693,8 @@
     }
 
     window.setOperatorStatus = function(groupId, opIdx, dayIdx, status) {
-      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      requireCurrentDayOrPin(APP_STATE.selectedYear, APP_STATE.selectedMonth, dayIdx + 1, () => {
+        const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
       if (!mData[groupId][opIdx]) mData[groupId][opIdx] = [];
       mData[groupId][opIdx][dayIdx] = status;
 
@@ -2563,12 +2709,14 @@
         renderGroupMatrix(groupId);
       }
       if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
+      });
     };
 
     // --- CELL CLICK TOGGLE ---
     window.toggleAttendance = function(groupId, opIdx, dayIdx) {
-      const monthKey = getActiveMonthKey();
-      const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
+      requireCurrentDayOrPin(APP_STATE.selectedYear, APP_STATE.selectedMonth, dayIdx + 1, () => {
+        const monthKey = getActiveMonthKey();
+        const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
       if (!mData[groupId][opIdx]) mData[groupId][opIdx] = [];
 
       const current = mData[groupId][opIdx][dayIdx];
@@ -2584,6 +2732,7 @@
       }
       renderGroupMatrix(groupId);
       if (APP_STATE.currentTab === 'kpi') updateKpiDashboard();
+      });
     };
 
     
@@ -2901,13 +3050,18 @@
     // --- APPLY CHECKIN MODAL TO MONTHLY SHEET ---
     function applyCheckinAttendance() {
       const selectedDateVal = document.getElementById('modalInputDate').value;
-      APP_STATE.selectedDate = selectedDateVal;
-      document.getElementById('kpiSelectedDate').value = selectedDateVal;
-
       const dateObj = new Date(selectedDateVal);
       const targetYear = dateObj.getFullYear();
       const targetMonth = dateObj.getMonth();
       const dayIdx = dateObj.getDate() - 1;
+
+      if (isBeforeToday(targetYear, targetMonth, dayIdx + 1) && !pastDatesUnlocked) {
+        requireCurrentDayOrPin(targetYear, targetMonth, dayIdx + 1, () => applyCheckinAttendance());
+        return;
+      }
+
+      APP_STATE.selectedDate = selectedDateVal;
+      document.getElementById('kpiSelectedDate').value = selectedDateVal;
 
       // Switch active month if date belongs to another month
       if (targetYear !== APP_STATE.selectedYear || targetMonth !== APP_STATE.selectedMonth) {
@@ -2982,12 +3136,12 @@
         ["Group-03 Testing & Fitment", metrics.groupBreakdown[3].total, `${metrics.groupBreakdown[3].absentPct.toFixed(1)}%`],
         [],
         ["3. HIGH ABSENTEEISM MANPOWER LEADERBOARD"],
-        ["Rank", "Operator Name", "Group", "Total Absent Days", "Working Days Considered", "Absenteeism %", "Category"]
+        ["Rank", "Operator Name", "Group", "Total Absent Days", "Leave Dates", "Working Days Considered", "Absenteeism %", "Category"]
       ];
 
       metrics.leaderboard.forEach((op, idx) => {
         const cat = op.pct > 15 ? "CRITICAL REVIEW" : op.pct > 8 ? "ATTENTION" : "NORMAL";
-        kpiRows.push([idx + 1, op.name, op.group, op.absentDays, op.totalDays, `${op.pct}%`, cat]);
+        kpiRows.push([idx + 1, op.name, op.group, op.absentDays, (op.absentDates || []).join(", ") || "-", op.totalDays, `${op.pct}%`, cat]);
       });
 
       kpiRows.push([]);
@@ -3344,8 +3498,10 @@
       // 7. Mark All Present in Matrix
       document.getElementById('markAllPresentBtn').addEventListener('click', () => {
         if (APP_STATE.currentTab === 'kpi') return;
+        const selD = new Date(APP_STATE.selectedDate);
+        requireCurrentDayOrPin(selD.getFullYear(), selD.getMonth(), selD.getDate(), () => {
         const gId = APP_STATE.currentTab === 'group1' ? 1 : APP_STATE.currentTab === 'group2' ? 2 : 3;
-        const dayIdx = new Date(APP_STATE.selectedDate).getDate() - 1;
+        const dayIdx = selD.getDate() - 1;
         const mData = ensureMonthAttendance(APP_STATE.selectedYear, APP_STATE.selectedMonth);
         const group = APP_STATE.groups[gId];
 
@@ -3358,6 +3514,7 @@
         renderGroupMatrix(gId);
         updateKpiDashboard();
         showToast("Marked Present", `All ${group.operators.length} operators in ${group.name} set to Present for today.`, "success");
+        });
       });
 
       // 8. Add Operator Modal Handling
@@ -3735,7 +3892,7 @@
       // Pillar 2 Accessibility: Close any open modal with Escape key
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-          ['checkinModal', 'exportModal', 'addOperatorModal', 'editOperatorModal', 'manageRosterModal', 'clearDataModal', 'cloudSetupModal'].forEach(id => {
+          ['checkinModal', 'exportModal', 'addOperatorModal', 'editOperatorModal', 'manageRosterModal', 'clearDataModal', 'cloudSetupModal', 'supervisorPinModal'].forEach(id => {
             const m = document.getElementById(id);
             if (m && !m.classList.contains('hidden')) m.classList.add('hidden');
           });
@@ -3755,6 +3912,8 @@
 
       function openCloudModal() {
         if (memberInput) memberInput.value = getTeamMemberName();
+        const pinCfgEl = document.getElementById('configSupervisorPinInput');
+        if (pinCfgEl) pinCfgEl.value = getSupervisorPin();
         const existing = getStoredFirebaseConfig();
         if (cfgInput && existing) {
           cfgInput.value = JSON.stringify(existing, null, 2);
@@ -3769,6 +3928,8 @@
       if (saveCloudBtn) {
         saveCloudBtn.addEventListener('click', () => {
           const memberName = (memberInput.value || '').trim() || 'Team Member';
+          const newPin = (document.getElementById('configSupervisorPinInput').value || '').trim();
+          if (newPin) localStorage.setItem('ATTENDANCE_SUPERVISOR_PIN', newPin);
           localStorage.setItem('ATTENDANCE_TEAM_MEMBER_NAME', memberName);
 
           const rawCfg = cfgInput.value.trim();
@@ -3811,6 +3972,66 @@
       setTimeout(() => {
         initCloudSync();
       }, 150);
+
+      
+      // 18. Supervisor PIN Modal & Past-Date Lock Listeners
+      const pinModal = document.getElementById('supervisorPinModal');
+      const pinInput = document.getElementById('supervisorPinInput');
+      const verifyPinBtn = document.getElementById('verifyPinBtn');
+      const cancelPinBtn = document.getElementById('cancelPinModalBtn');
+      const pinErr = document.getElementById('pinErrorMsg');
+      const pastLockBtn = document.getElementById('pastLockToggleBtn');
+
+      if (pastLockBtn) {
+        pastLockBtn.addEventListener('click', () => {
+          if (pastDatesUnlocked) {
+            pastDatesUnlocked = false;
+            updatePastLockUI();
+            showToast("Past Dates Locked", "Only today's attendance can be edited.", "success");
+          } else {
+            requireCurrentDayOrPin(2026, 0, 1, () => {
+              updatePastLockUI();
+            });
+          }
+        });
+      }
+
+      function handlePinVerify() {
+        const entered = (pinInput.value || '').trim();
+        if (entered === getSupervisorPin()) {
+          pastDatesUnlocked = true;
+          updatePastLockUI();
+          pinModal.classList.add('hidden');
+          showToast("Past Dates Unlocked", "Supervisor PIN verified for this session.", "success");
+          if (typeof pendingPastAction === 'function') {
+            const fn = pendingPastAction;
+            pendingPastAction = null;
+            fn();
+          }
+        } else {
+          if (pinErr) pinErr.classList.remove('hidden');
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+
+      if (verifyPinBtn) verifyPinBtn.addEventListener('click', handlePinVerify);
+      if (pinInput) {
+        pinInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handlePinVerify();
+          }
+        });
+      }
+      if (cancelPinBtn) {
+        cancelPinBtn.addEventListener('click', () => {
+          pendingPastAction = null;
+          pinModal.classList.add('hidden');
+        });
+      }
+
+      updatePastLockUI();
 
       // Initial render: restore saved tab or render dashboard
       if (APP_STATE.currentTab && APP_STATE.currentTab !== 'kpi') {
